@@ -22,3 +22,4 @@ class Observation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField()
     icon_params = models.TextField()
+    gone = models.BooleanField()
