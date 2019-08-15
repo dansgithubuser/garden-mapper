@@ -141,6 +141,8 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
+LOGIN_REDIRECT_URL = '/'
+
 if os.environ.get('DJANGOGO_ENV') != 'local':
     import django_heroku
     django_heroku.settings(locals())
