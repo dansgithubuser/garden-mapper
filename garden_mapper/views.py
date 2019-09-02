@@ -41,6 +41,7 @@ def _crudify(name, model):
         params['user'] = request.user.id
         return h_filter(params)
     def h_permitted(instance, request):
+        if isinstance(instance, models.User): return instance == request.user
         if 'user' in h_fields(instance): return request.user == instance.user
         for field_name, field in h_fields(instance).items():
             if isinstance(field, ForeignKey):
@@ -95,3 +96,20 @@ for name, model in inspect.getmembers(models):
     if getattr(model, '__module__', None) != 'garden_mapper.models': continue
     if not issubclass(model, models.models.Model): continue
     _crudify(name, model)
+
+def garden_details(request):
+    garden_id = request.GET['id']
+    garden = models.Garden.objects.get(id=garden_id)
+    if garden.user != request.user: return HttpResponse(status=404)
+    references = models.Reference.objects.filter(garden_id=garden_id)
+    plants = models.Plant.objects.filter(garden_id=garden_id)
+    observations = models.Observation.objects.filter(plant__garden_id=garden_id)
+    result = {
+        'references': [i for i in references.values()],
+        'plants': {i['id']: i for i in plants.values()},
+    }
+    for i in result['plants']: result['plants'][i]['observations'] = []
+    for i in observations.values():
+        result['plants'][i['plant_id']]['observations'].append(i)
+    result['plants'] = [v for k, v in result['plants'].items()]
+    return JsonResponse(result)

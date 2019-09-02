@@ -1,6 +1,212 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <a href='/signup'>Signup</a><br>
-  <a href='/login'>Login</a><br>
+  <!-- header -->
+  <a href='/signup'>Signup</a>
+  <a href='/login'>Login</a>
+  {% if user.is_authenticated %}
+    Hello, {{ user.get_username }}!
+  {% endif %}
+  <br>
+  <!-- canvas -->
+  <canvas id='canvas' width=800 height=600 style='border-style:outset'>
+    <p>Your browser does not support the canvas element.</p>
+  </canvas>
+  <br>
+  <!-- controls -->
+  <div id='app'>
+    <div style='float:left; padding-right:2em'>
+      <h2>gardens</h2>
+      <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails()'><br>
+      <h3>create</h3>
+      <input type='text' v-model='gardenCreateName'><br>
+      <input type='button' value='create' @click='gardenCreate()'>
+    </div>
+    <div style='float:left; padding-right:2em'>
+      <h2>references</h2>
+      <table v-if='references.length'>
+        <tr>
+          <th></th>
+          <th>1</th>
+          <th>2</th>
+        </tr>
+        <tr v-for='reference in references'>
+          <td>v{ reference.name }v (v{ reference.x }v, v{ reference.y }v)</td>
+          <td><input type='radio' :value='reference.id' v-model='reference1'></td>
+          <td><input type='radio' :value='reference.id' v-model='reference2'></td>
+        </tr>
+      </table>
+      <h3>prefer</h3>
+      <input type='radio' id='n' value='n' v-model='referencePrefer'><label for='n'>north</label>
+      <input type='radio' id='e' value='e' v-model='referencePrefer'><label for='e'>east </label><br>
+      <input type='radio' id='s' value='s' v-model='referencePrefer'><label for='s'>south</label>
+      <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
+      <h3>create</h3>
+      <input type='text' v-model='referenceCreateName'>name<br>
+      <input type='number' v-model='referenceCreateX'>x<br>
+      <input type='number' v-model='referenceCreateY'>y<br>
+      <input type='button' value='create' @click='referenceCreate()'>
+    </div>
+    <div style='float:left; padding-right:2em'>
+      <h2>plants</h2>
+      <input type='text' v-model='plantObserveName'>name<br>
+      <input type='number' v-model='plantObserveD1'>distance from reference 1<br>
+      <input type='number' v-model='plantObserveD2'>distance from reference 2<br>
+      <input type='button' value='observe' @click='plantObserve()'>
+    </div>
+  </div>
+  {% csrf_token %}
+  <!-- script -->
+  {% if debug %}
+    <script src='https://cdn.jsdelivr.net/npm/vue/dist/vue.js'></script>
+  {% else %}
+    <script src='https://cdn.jsdelivr.net/npm/vue'></script>
+  {% endif %}
+  <script>
+
+const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
+const CANVAS = document.getElementById('canvas');
+const CONTEXT = CANVAS.getContext('2d');
+
+var app = new Vue({
+  el: '#app',
+  delimiters: ['v{', '}v'],
+  data: () => ({
+    'gardenCreateName': '',
+    'gardens': [],
+    'gardenId': null,
+    'referenceCreateName': '',
+    'referenceCreateX': '',
+    'referenceCreateY': '',
+    'references': [],
+    'reference1': null,
+    'reference2': null,
+    'referencePrefer': 'n',
+    'plantObserveName': '',
+    'plantObserveD1': '',
+    'plantObserveD2': '',
+    'plants': [],
+    'x': 0,
+    'y': 0,
+    'zoom': 1, // zoom = pixels / observation_units
+  }),
+  methods: {
+    post(url, body) {
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify(body),
+      });
+    },
+    transform(point) {
+      return {
+        x: (point.x - this.x) * this.zoom + CANVAS.width  / 2,
+        y: (point.y - this.y) * this.zoom + CANVAS.height / 2,
+      };
+    },
+    async gardenList() {
+      this.gardens = await fetch('/garden_retrieve').then(r => r.json()).then(j => j.items);
+    },
+    gardenCreate() {
+      this.post('/garden_create', { name: this.gardenCreateName }).then(this.gardenList);
+    },
+    async gardenDetails() {
+      const { references, plants } = await fetch(`/garden_details?id=${this.gardenId}`).then(r => r.json());
+      this.references = references;
+      this.plants = plants;
+      // get extent of garden
+      if (references.length == 0 && plants.length == 0) return;
+      var entities = references;
+      for (const plant of plants) entities = entities.concat(plant.observations);
+      var xi, yi, xf, yf;
+      for (const i of entities) {
+        if (xi == undefined || i.x < xi) xi = i.x;
+        if (yi == undefined || i.y < yi) yi = i.y;
+        if (xf == undefined || i.x > xf) xf = i.x;
+        if (yf == undefined || i.y > yf) yf = i.y;
+      }
+      // center and zoom
+      this.x = (xi + xf) / 2;
+      this.y = (yi + yf) / 2;
+      this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
+      if (this.zoom == 0) this.zoom = 1;
+      // render
+      for (const i of references) {
+        const { x, y } = this.transform(i);
+        CONTEXT.beginPath();
+        CONTEXT.arc(x, y, 4, 0, 2 * Math.PI);
+        CONTEXT.stroke();
+      }
+      for (const i of plants) {
+        const { x, y } = this.transform(i.observations[i.observations.length - 1]);
+        CONTEXT.beginPath();
+        CONTEXT.arc(x, y, 4, 0, Math.PI);
+        CONTEXT.stroke();
+      }
+    },
+    referenceCreate() {
+      this.post('/reference_create', {
+        garden: this.gardenId,
+        name: this.referenceCreateName,
+        x: this.referenceCreateX,
+        y: this.referenceCreateY,
+      }).then(this.gardenDetails);
+    },
+    calculateXY() {
+      var r1, r2;
+      for (const i of this.references) {
+        if (i.id == this.reference1) r1 = { x: i.x, y: i.y };
+        if (i.id == this.reference2) r2 = { x: i.x, y: i.y };
+      }
+      const d1 = this.plantObserveD1;
+      const d2 = this.plantObserveD2;
+      // create a new coordinate system (p, q) with r1 at origin and r2 and (d, 0)
+      const d = Math.sqrt(Math.pow(r1.x - r2.x, 2) + Math.pow(r1.y - r2.y, 2));
+      const i = {};
+      i.p = (Math.pow(d, 2) - Math.pow(d2, 2) + Math.pow(d1, 2)) / (2 * d);
+      i.q = Math.sqrt(Math.pow(d1, 2) - Math.pow(i.p, 2));
+      // transform back to (x, y)
+      const a = {
+        x: r1.x + (r2.x - r1.x) / d * i.p + (r2.y - r1.y) / d * i.q,
+        y: r1.y + (r2.y - r1.y) / d * i.p + (r2.x - r1.x) / d * i.q,
+      };
+      const b = {
+        x: r1.x + (r2.x - r1.x) / d * i.p - (r2.y - r1.y) / d * i.q,
+        y: r1.y + (r2.y - r1.y) / d * i.p - (r2.x - r1.x) / d * i.q,
+      };
+      // return preferred
+      if (this.referencePrefer == 'n') return a.y > b.y ? a : b;
+      if (this.referencePrefer == 'e') return a.x > b.x ? a : b;
+      if (this.referencePrefer == 's') return a.y < b.y ? a : b;
+      if (this.referencePrefer == 'w') return a.x < b.x ? a : b;
+    },
+    async plantObserve() {
+      const { x, y } = this.calculateXY();
+      var plantId = null;
+      for (plant of this.plants)
+        if (plant.name == this.plantObserveName)
+          plantId = i.id;
+      if (!plantId) plantId = await this.post('/plant_create', {
+        garden: this.gardenId,
+        name: this.plantObserveName,
+      }).then(r => r.json()).then(j => j.id);
+      await this.post('/observation_create', {
+        plant: plantId,
+        x, y,
+        notes: '',
+        icon_params: JSON.stringify({}),
+        gone: false,
+      });
+      this.gardenDetails();
+    },
+  },
+  mounted() {
+    this.gardenList();
+  },
+});
+
+  </script>
 {% endblock %}
