@@ -110,6 +110,7 @@ def garden_details(request):
     }
     for i in result['plants']: result['plants'][i]['observations'] = []
     for i in observations.values():
+        i['icon_params'] = json.loads(i['icon_params'])
         result['plants'][i['plant_id']]['observations'].append(i)
     result['plants'] = [v for k, v in result['plants'].items()]
     return JsonResponse(result)

@@ -43,15 +43,33 @@
       <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
       <h3>create</h3>
       <input type='text' v-model='referenceCreateName'>name<br>
-      <input type='number' v-model='referenceCreateX'>x<br>
-      <input type='number' v-model='referenceCreateY'>y<br>
+      <input type='number' v-model.number='referenceCreateX'>x<br>
+      <input type='number' v-model.number='referenceCreateY'>y<br>
       <input type='button' value='create' @click='referenceCreate()'>
     </div>
     <div style='float:left; padding-right:2em'>
       <h2>plants</h2>
       <input type='text' v-model='plantObserveName'>name<br>
-      <input type='number' v-model='plantObserveD1'>distance from reference 1<br>
-      <input type='number' v-model='plantObserveD2'>distance from reference 2<br>
+      <h3>location</h3>
+      <input type='number' v-model.number='plantObserveD1'>distance from reference 1<br>
+      <input type='number' v-model.number='plantObserveD2'>distance from reference 2<br>
+      <h3>icon</h3>
+      <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
+      <div v-for='v, k in plantObserveIconParams'>
+        <h4>v{ k }v</h4>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.size'>size<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.segments'>segments<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.split.number'>split-number<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.start'>split-angle-start<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.step'>split-angle-step<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.variance'>split-angle-variance<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.width'>width<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.corrugation.amplitude'>corrugation-amplitude<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.corrugation.number'>corrugation-number<br>
+        <input type='button' value='add child' @click='iconParamsAddChild(k)'>
+        <input type='button' value='remove' @click='iconParamsRemoveChild(k)' v-if='k!="root"'>
+      </div>
+      <h3></h3>
       <input type='button' value='observe' @click='plantObserve()'>
     </div>
   </div>
@@ -67,6 +85,41 @@
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
 const CANVAS = document.getElementById('canvas');
 const CONTEXT = CANVAS.getContext('2d');
+
+class Rand {
+  constructor(seed) {
+    this.state = seed;
+  }
+  next(min = 0, max = 1) {
+    this.state ^= this.state << 13;
+    this.state ^= this.state >> 17;
+    this.state ^= this.state << 5;
+    const e30 = 1 << 30;
+    return ((this.state + 2 * e30) / (4 * e30) * (max - min)) + min;
+  }
+}
+
+function constructIconParams(seed = false) {
+  const result = {
+    size: 0.02,
+    segments: 2,
+    split: {
+      number: 2,
+      angle: {
+        start: -0.2,
+        step: 0.4,
+        variance: 0.1,
+      },
+    },
+    width: 0,
+    corrugation: {
+      amplitude: 0,
+      number: 2,
+    },
+  };
+  if (seed) result['seed'] = 1;
+  return result;
+}
 
 var app = new Vue({
   el: '#app',
@@ -85,6 +138,7 @@ var app = new Vue({
     'plantObserveName': '',
     'plantObserveD1': '',
     'plantObserveD2': '',
+    'plantObserveIconParams': {'root': constructIconParams(true)},
     'plants': [],
     'x': 0,
     'y': 0,
@@ -101,12 +155,173 @@ var app = new Vue({
         body: JSON.stringify(body),
       });
     },
-    transform(point) {
+    // math
+    transformToPixels(point) {
       return {
-        x: (point.x - this.x) * this.zoom + CANVAS.width  / 2,
-        y: (point.y - this.y) * this.zoom + CANVAS.height / 2,
+        px:  (point.x - this.x) * this.zoom + CANVAS.width  / 2,
+        py: -(point.y - this.y) * this.zoom + CANVAS.height / 2,
       };
     },
+    transformToWorld(point) {
+      return {
+        x: (point.x - CANVAS.width  / 2) / this.zoom + this.x,
+        y: (point.y - CANVAS.height / 2) / this.zoom + this.y,
+      };
+    },
+    distance(xi, yi, xf, yf) {
+      return Math.sqrt(Math.pow(xf - xi, 2) + Math.pow(yf - yi, 2));
+    },
+    plantObservation(plant) {
+      return plant.observations[plant.observations.length - 1];
+    },
+    calculateXY() {
+      var r1, r2;
+      for (const i of this.references) {
+        if (i.id == this.reference1) r1 = { x: i.x, y: i.y };
+        if (i.id == this.reference2) r2 = { x: i.x, y: i.y };
+      }
+      if (!r1 || !r2) {
+        alert('references not selected');
+        return;
+      }
+      const d1 = this.plantObserveD1;
+      const d2 = this.plantObserveD2;
+      // create a new coordinate system (p, q) with r1 at origin and r2 and (d, 0)
+      const d = this.distance(r1.x, r1.y, r2.x, r2.y);
+      const i = {};
+      i.p = (Math.pow(d, 2) - Math.pow(d2, 2) + Math.pow(d1, 2)) / (2 * d);
+      i.q = Math.sqrt(Math.pow(d1, 2) - Math.pow(i.p, 2));
+      // transform back to (x, y)
+      const a = {
+        x: r1.x + (r2.x - r1.x) / d * i.p + (r2.y - r1.y) / d * i.q,
+        y: r1.y + (r2.y - r1.y) / d * i.p + (r2.x - r1.x) / d * i.q,
+      };
+      const b = {
+        x: r1.x + (r2.x - r1.x) / d * i.p - (r2.y - r1.y) / d * i.q,
+        y: r1.y + (r2.y - r1.y) / d * i.p - (r2.x - r1.x) / d * i.q,
+      };
+      // return preferred
+      if (this.referencePrefer == 'n') return a.y > b.y ? a : b;
+      if (this.referencePrefer == 'e') return a.x > b.x ? a : b;
+      if (this.referencePrefer == 's') return a.y < b.y ? a : b;
+      if (this.referencePrefer == 'w') return a.x < b.x ? a : b;
+    },
+    iconParamsFlatten(params) {
+      function recurse(params, path = 'root') {
+        var result = { [path]: params };
+        for (const i in params.children)
+          result = { ...result, ...recurse(params.children[i], path + '.' + i) };
+        return result;
+      }
+      const result = recurse(params);
+      for (const k in result) delete result[k].children;
+      return JSON.parse(JSON.stringify(result));
+    },
+    iconParamsNest(params) {
+      const keys = Object.keys(params).sort();
+      const result = { ...params['root'], children: {} };
+      for (const i of keys.slice(1)) {
+        var node = result;
+        const split = i.split('.');
+        const leaf = split.pop();
+        for (const j of split.slice(1)) node = node.children[j];
+        node.children[leaf] = { ...params[i], children: {} };
+      }
+      return JSON.parse(JSON.stringify(result));
+    },
+    // rendering
+    renderSegment(x, y, angle, params, rand, split) {
+      const angleF = (angle
+        + params.split.angle.start
+        + split * params.split.angle.step
+        + params.split.angle.variance * rand.next(-1, 1)
+      );
+      const xf = x + params.size * Math.sin(angleF);
+      const yf = y + params.size * Math.cos(angleF);
+      const d = this.distance(x, y, xf, yf);
+      const w = {
+        x: -(yf - y) / d * params.width,
+        y:  (xf - x) / d * params.width,
+      };
+      const divisions = params.corrugation.number * 5;
+      CONTEXT.beginPath();
+      {
+        const { px, py } = this.transformToPixels({ x, y });
+        CONTEXT.moveTo(px, py);
+      }
+      for (var i = 0; i < divisions; ++i) {
+        const theta = (i / (divisions - 1)) * 2 * Math.PI;
+        const p = (1 - Math.cos(theta)) / 2;
+        const q = (    Math.sin(theta)) / 2;
+        const s = 1 + params.corrugation.amplitude * Math.cos(params.corrugation.number * theta);
+        const { px, py } = this.transformToPixels({
+          x: x + (p * (xf - x) + q * w.x) * s,
+          y: y + (p * (yf - y) + q * w.y) * s,
+        });
+        CONTEXT.lineTo(px, py);
+      }
+      CONTEXT.stroke();
+      return { x: xf, y: yf, angle: angleF };
+    },
+    renderIcon(x, y, params) {
+      const rand = new Rand(params.seed);
+      const work = [{ x, y, angle: 0, generation: 1, params }];
+      while (work.length) {
+        const segment = work.pop();
+        for (var split = 0; split < segment.params.split.number; ++split) {
+          const { x, y, angle } = this.renderSegment(segment.x, segment.y, segment.angle, segment.params, rand, split);
+          if (segment.generation < segment.params.segments)
+            work.push({ x, y, angle, generation: segment.generation + 1, params: segment.params });
+          const children = segment.params.children;
+          for (const k in children)
+            work.push({ x, y, angle, generation: 1, params: children[k]});
+        }
+      }
+    },
+    render() {
+      CONTEXT.clearRect(0, 0, CANVAS.width, CANVAS.height);
+      for (const i of this.references) {
+        const { px, py } = this.transformToPixels(i);
+        CONTEXT.beginPath();
+        CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
+        CONTEXT.stroke();
+      }
+      for (const i of this.plants) {
+        var { x, y, icon_params } = this.plantObservation(i);
+        if (i.name == this.plantObserveName)
+          icon_params = this.iconParamsNest(this.plantObserveIconParams);
+        const { px, py } = this.transformToPixels({x, y});
+        CONTEXT.beginPath();
+        CONTEXT.arc(px, py, 4, 0, Math.PI);
+        CONTEXT.stroke();
+        this.renderIcon(x, y, icon_params);
+      }
+    },
+    // events
+    mouseUp(evt) {
+      for (const plant of this.plants) {
+        const observation = this.plantObservation(plant);
+        const location = this.transformToPixels(observation);
+        if (this.distance(location.px, location.py, evt.offsetX, evt.offsetY) < 10) {
+          this.plantObserveName = plant.name;
+          this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
+          return;
+        }
+      }
+    },
+    iconParamsAddChild(parent) {
+      const child = parent + '.' + Object.keys(this.plantObserveIconParams).length;
+      this.$set(this.plantObserveIconParams, child, constructIconParams());
+      this.iconParamsChanged();
+    },
+    iconParamsRemoveChild(k) {
+      this.$delete(this.plantObserveIconParams, k);
+      this.iconParamsChanged();
+    },
+    iconParamsChanged() {
+      this.render();
+    },
+    // API
     async gardenList() {
       this.gardens = await fetch('/garden_retrieve').then(r => r.json()).then(j => j.items);
     },
@@ -134,18 +349,7 @@ var app = new Vue({
       this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
       if (this.zoom == 0) this.zoom = 1;
       // render
-      for (const i of references) {
-        const { x, y } = this.transform(i);
-        CONTEXT.beginPath();
-        CONTEXT.arc(x, y, 4, 0, 2 * Math.PI);
-        CONTEXT.stroke();
-      }
-      for (const i of plants) {
-        const { x, y } = this.transform(i.observations[i.observations.length - 1]);
-        CONTEXT.beginPath();
-        CONTEXT.arc(x, y, 4, 0, Math.PI);
-        CONTEXT.stroke();
-      }
+      this.render();
     },
     referenceCreate() {
       this.post('/reference_create', {
@@ -155,58 +359,49 @@ var app = new Vue({
         y: this.referenceCreateY,
       }).then(this.gardenDetails);
     },
-    calculateXY() {
-      var r1, r2;
-      for (const i of this.references) {
-        if (i.id == this.reference1) r1 = { x: i.x, y: i.y };
-        if (i.id == this.reference2) r2 = { x: i.x, y: i.y };
-      }
-      const d1 = this.plantObserveD1;
-      const d2 = this.plantObserveD2;
-      // create a new coordinate system (p, q) with r1 at origin and r2 and (d, 0)
-      const d = Math.sqrt(Math.pow(r1.x - r2.x, 2) + Math.pow(r1.y - r2.y, 2));
-      const i = {};
-      i.p = (Math.pow(d, 2) - Math.pow(d2, 2) + Math.pow(d1, 2)) / (2 * d);
-      i.q = Math.sqrt(Math.pow(d1, 2) - Math.pow(i.p, 2));
-      // transform back to (x, y)
-      const a = {
-        x: r1.x + (r2.x - r1.x) / d * i.p + (r2.y - r1.y) / d * i.q,
-        y: r1.y + (r2.y - r1.y) / d * i.p + (r2.x - r1.x) / d * i.q,
-      };
-      const b = {
-        x: r1.x + (r2.x - r1.x) / d * i.p - (r2.y - r1.y) / d * i.q,
-        y: r1.y + (r2.y - r1.y) / d * i.p - (r2.x - r1.x) / d * i.q,
-      };
-      // return preferred
-      if (this.referencePrefer == 'n') return a.y > b.y ? a : b;
-      if (this.referencePrefer == 'e') return a.x > b.x ? a : b;
-      if (this.referencePrefer == 's') return a.y < b.y ? a : b;
-      if (this.referencePrefer == 'w') return a.x < b.x ? a : b;
-    },
     async plantObserve() {
-      const { x, y } = this.calculateXY();
+      // gather observation from user
+      var location;
+      if (this.plantObserveD1 != '' && this.plantObserveD2 != '')
+        location = this.calculateXY();
+      var iconParams = this.iconParamsNest(this.plantObserveIconParams);
+      // ensure plant exists
       var plantId = null;
       for (plant of this.plants)
-        if (plant.name == this.plantObserveName)
-          plantId = i.id;
+        if (plant.name == this.plantObserveName) {
+          plantId = plant.id;
+          location = location == undefined ? plant : location;
+          iconParams = plant.iconParams;
+          break;
+        }
       if (!plantId) plantId = await this.post('/plant_create', {
         garden: this.gardenId,
         name: this.plantObserveName,
       }).then(r => r.json()).then(j => j.id);
+      // observe
       await this.post('/observation_create', {
         plant: plantId,
-        x, y,
+        x: location.x,
+        y: location.y,
         notes: '',
-        icon_params: JSON.stringify({}),
+        icon_params: JSON.stringify(iconParams),
         gone: false,
       });
+      // update
       this.gardenDetails();
+    },
+  },
+  watch: {
+    plantObserveName() {
+      this.render();
     },
   },
   mounted() {
     this.gardenList();
   },
 });
+
+CANVAS.addEventListener('mouseup', app.mouseUp);
 
   </script>
 {% endblock %}
