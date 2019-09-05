@@ -244,6 +244,7 @@ var app = new Vue({
         y:  (xf - x) / d * params.width,
       };
       const divisions = params.corrugation.number * 5;
+      CONTEXT.fillStyle = 'white';
       CONTEXT.beginPath();
       {
         const { px, py } = this.transformToPixels({ x, y });
@@ -261,6 +262,7 @@ var app = new Vue({
         CONTEXT.lineTo(px, py);
       }
       CONTEXT.stroke();
+      CONTEXT.fill();
       return { x: xf, y: yf, angle: angleF };
     },
     renderIcon(x, y, params) {
