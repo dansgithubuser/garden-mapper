@@ -50,10 +50,12 @@
     <div style='float:left; padding-right:2em'>
       <h2>plants</h2>
       <input type='text' v-model='plantObserveName'>name<br>
+      <input type='button' value='observe' @click='plantObserve()'>
       <h3>location</h3>
       <input type='number' v-model.number='plantObserveD1'>distance from reference 1<br>
       <input type='number' v-model.number='plantObserveD2'>distance from reference 2<br>
       <h3>icon</h3>
+      <input type='text' v-model='plantObserveIconParamsCopyFrom'><input type='button' value='copy' @click='iconParamsCopy'><br>
       <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
       <div v-for='v, k in plantObserveIconParams'>
         <h4>v{ k }v</h4>
@@ -69,8 +71,6 @@
         <input type='button' value='add child' @click='iconParamsAddChild(k)'>
         <input type='button' value='remove' @click='iconParamsRemoveChild(k)' v-if='k!="root"'>
       </div>
-      <h3></h3>
-      <input type='button' value='observe' @click='plantObserve()'>
     </div>
   </div>
   {% csrf_token %}
@@ -138,6 +138,7 @@ var app = new Vue({
     'plantObserveName': '',
     'plantObserveD1': '',
     'plantObserveD2': '',
+    'plantObserveIconParamsCopyFrom': '',
     'plantObserveIconParams': {'root': constructIconParams(true)},
     'plants': [],
     'x': 0,
@@ -205,29 +206,6 @@ var app = new Vue({
       if (this.referencePrefer == 'e') return a.x > b.x ? a : b;
       if (this.referencePrefer == 's') return a.y < b.y ? a : b;
       if (this.referencePrefer == 'w') return a.x < b.x ? a : b;
-    },
-    iconParamsFlatten(params) {
-      function recurse(params, path = 'root') {
-        var result = { [path]: params };
-        for (const i in params.children)
-          result = { ...result, ...recurse(params.children[i], path + '.' + i) };
-        return result;
-      }
-      const result = recurse(params);
-      for (const k in result) delete result[k].children;
-      return JSON.parse(JSON.stringify(result));
-    },
-    iconParamsNest(params) {
-      const keys = Object.keys(params).sort();
-      const result = { ...params['root'], children: {} };
-      for (const i of keys.slice(1)) {
-        var node = result;
-        const split = i.split('.');
-        const leaf = split.pop();
-        for (const j of split.slice(1)) node = node.children[j];
-        node.children[leaf] = { ...params[i], children: {} };
-      }
-      return JSON.parse(JSON.stringify(result));
     },
     // rendering
     renderSegment(x, y, angle, params, rand, split) {
@@ -311,6 +289,30 @@ var app = new Vue({
         }
       }
     },
+    // icon params
+    iconParamsFlatten(params) {
+      function recurse(params, path = 'root') {
+        var result = { [path]: params };
+        for (const i in params.children)
+          result = { ...result, ...recurse(params.children[i], path + '.' + i) };
+        return result;
+      }
+      const result = JSON.parse(JSON.stringify(recurse(params)));
+      for (const k in result) delete result[k].children;
+      return result;
+    },
+    iconParamsNest(params) {
+      const keys = Object.keys(params).sort();
+      const result = { ...params['root'], children: {} };
+      for (const i of keys.slice(1)) {
+        var node = result;
+        const split = i.split('.');
+        const leaf = split.pop();
+        for (const j of split.slice(1)) node = node.children[j];
+        node.children[leaf] = { ...params[i], children: {} };
+      }
+      return JSON.parse(JSON.stringify(result));
+    },
     iconParamsAddChild(parent) {
       const child = parent + '.' + Object.keys(this.plantObserveIconParams).length;
       this.$set(this.plantObserveIconParams, child, constructIconParams());
@@ -322,6 +324,16 @@ var app = new Vue({
     },
     iconParamsChanged() {
       this.render();
+    },
+    iconParamsCopy() {
+      for (const i of this.plants)
+        if (i.name == this.plantObserveIconParamsCopyFrom) {
+          const observation = this.plantObservation(i);
+          this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
+          break;
+        }
+      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
+      this.iconParamsChanged();
     },
     // API
     async gardenList() {
@@ -369,11 +381,10 @@ var app = new Vue({
       var iconParams = this.iconParamsNest(this.plantObserveIconParams);
       // ensure plant exists
       var plantId = null;
-      for (plant of this.plants)
-        if (plant.name == this.plantObserveName) {
-          plantId = plant.id;
-          location = location == undefined ? plant : location;
-          iconParams = plant.iconParams;
+      for (i of this.plants)
+        if (i.name == this.plantObserveName) {
+          plantId = i.id;
+          if (location == undefined) location = this.plantObservation(i);
           break;
         }
       if (!plantId) plantId = await this.post('/plant_create', {
