@@ -209,7 +209,7 @@ var app = new Vue({
     },
     // rendering
     renderSegment(x, y, angle, params, rand, split) {
-      const angleF = (angle
+      const angleF = angle + 2 * Math.PI * (
         + params.split.angle.start
         + split * params.split.angle.step
         + params.split.angle.variance * rand.next(-1, 1)
