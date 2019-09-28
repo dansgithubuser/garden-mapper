@@ -43,17 +43,19 @@
       <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
       <h3>create</h3>
       <input type='text' v-model='referenceCreateName' placeholder='name'><br>
-      <input type='number' v-model.number='referenceCreateX' placeholder='x'><br>
-      <input type='number' v-model.number='referenceCreateY' placeholder='y'><br>
+      <input type='number' v-model.number='referenceCreateX'>x<br>
+      <input type='number' v-model.number='referenceCreateY'>y<br>
       <input type='button' value='create' @click='referenceCreate()'>
+      <h2>location</h2>
+      <input type='number' v-model.number='locationD1' placeholder='distance from reference 1'>R1<br>
+      <input type='number' v-model.number='locationD2' placeholder='distance from reference 2'>R2<br>
     </div>
     <div style='float:left; padding-right:2em'>
       <h2>plants</h2>
       <input type='text' v-model='plantObserveName' placeholder='name'><br>
+      <input type='number' v-model.number='plantObserveX'>x<br>
+      <input type='number' v-model.number='plantObserveY'>y<br>
       <input type='button' value='observe' @click='plantObserve()'>
-      <h3>location</h3>
-      <input type='number' v-model.number='plantObserveD1' placeholder='distance from reference 1'><br>
-      <input type='number' v-model.number='plantObserveD2' placeholder='distance from reference 2'><br>
       <h3>icon</h3>
       <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
       <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
@@ -135,9 +137,11 @@ var app = new Vue({
     'reference1': null,
     'reference2': null,
     'referencePrefer': 'n',
+    'locationD1': '',
+    'locationD2': '',
     'plantObserveName': '',
-    'plantObserveD1': '',
-    'plantObserveD2': '',
+    'plantObserveX': '',
+    'plantObserveY': '',
     'plantObserveIconParamsCopyFrom': '',
     'plantObserveIconParams': {'root': constructIconParams(true)},
     'plants': [],
@@ -185,8 +189,8 @@ var app = new Vue({
         alert('references not selected');
         return;
       }
-      const d1 = this.plantObserveD1;
-      const d2 = this.plantObserveD2;
+      const d1 = this.locationD1;
+      const d2 = this.locationD2;
       // create a new coordinate system (p, q) with r1 at origin and r2 and (d, 0)
       const d = this.distance(r1.x, r1.y, r2.x, r2.y);
       const i = {};
@@ -201,11 +205,16 @@ var app = new Vue({
         x: r1.x + (r2.x - r1.x) / d * i.p - (r2.y - r1.y) / d * i.q,
         y: r1.y + (r2.y - r1.y) / d * i.p - (r2.x - r1.x) / d * i.q,
       };
-      // return preferred
-      if (this.referencePrefer == 'n') return a.y > b.y ? a : b;
-      if (this.referencePrefer == 'e') return a.x > b.x ? a : b;
-      if (this.referencePrefer == 's') return a.y < b.y ? a : b;
-      if (this.referencePrefer == 'w') return a.x < b.x ? a : b;
+      // select preferred
+      var result;
+      if (this.referencePrefer == 'n') result = a.y > b.y ? a : b;
+      if (this.referencePrefer == 'e') result = a.x > b.x ? a : b;
+      if (this.referencePrefer == 's') result = a.y < b.y ? a : b;
+      if (this.referencePrefer == 'w') result = a.x < b.x ? a : b;
+      this.referenceCreateX = result.x;
+      this.referenceCreateY = result.y;
+      this.plantObserveX = result.x;
+      this.plantObserveY = result.y;
     },
     // rendering
     renderSegment(x, y, angle, params, rand, split) {
@@ -376,8 +385,8 @@ var app = new Vue({
     async plantObserve() {
       // gather observation from user
       var location;
-      if (this.plantObserveD1 != '' && this.plantObserveD2 != '')
-        location = this.calculateXY();
+      if (this.plantObserveX != '' && this.plantObserveY != '')
+        location = { x: this.plantObserveX, y: this.plantObserveY };
       var iconParams = this.iconParamsNest(this.plantObserveIconParams);
       // ensure plant exists
       var plantId = null;
@@ -407,6 +416,12 @@ var app = new Vue({
   watch: {
     plantObserveName() {
       this.render();
+    },
+    locationD1() {
+      this.calculateXY();
+    },
+    locationD2() {
+      this.calculateXY();
     },
   },
   mounted() {
