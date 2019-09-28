@@ -19,7 +19,7 @@
       <h2>gardens</h2>
       <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails()'><br>
       <h3>create</h3>
-      <input type='text' v-model='gardenCreateName'><br>
+      <input type='text' v-model='gardenCreateName' placeholder='name'><br>
       <input type='button' value='create' @click='gardenCreate()'>
     </div>
     <div style='float:left; padding-right:2em'>
@@ -42,20 +42,20 @@
       <input type='radio' id='s' value='s' v-model='referencePrefer'><label for='s'>south</label>
       <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
       <h3>create</h3>
-      <input type='text' v-model='referenceCreateName'>name<br>
-      <input type='number' v-model.number='referenceCreateX'>x<br>
-      <input type='number' v-model.number='referenceCreateY'>y<br>
+      <input type='text' v-model='referenceCreateName' placeholder='name'><br>
+      <input type='number' v-model.number='referenceCreateX' placeholder='x'><br>
+      <input type='number' v-model.number='referenceCreateY' placeholder='y'><br>
       <input type='button' value='create' @click='referenceCreate()'>
     </div>
     <div style='float:left; padding-right:2em'>
       <h2>plants</h2>
-      <input type='text' v-model='plantObserveName'>name<br>
+      <input type='text' v-model='plantObserveName' placeholder='name'><br>
       <input type='button' value='observe' @click='plantObserve()'>
       <h3>location</h3>
-      <input type='number' v-model.number='plantObserveD1'>distance from reference 1<br>
-      <input type='number' v-model.number='plantObserveD2'>distance from reference 2<br>
+      <input type='number' v-model.number='plantObserveD1' placeholder='distance from reference 1'><br>
+      <input type='number' v-model.number='plantObserveD2' placeholder='distance from reference 2'><br>
       <h3>icon</h3>
-      <input type='text' v-model='plantObserveIconParamsCopyFrom'><input type='button' value='copy' @click='iconParamsCopy'><br>
+      <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
       <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
       <div v-for='v, k in plantObserveIconParams'>
         <h4>v{ k }v</h4>
