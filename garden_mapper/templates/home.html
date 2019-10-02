@@ -446,7 +446,7 @@ var app = new Vue({
         this.x = (xi + xf) / 2;
         this.y = (yi + yf) / 2;
         this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
-        if (this.zoom == 0) this.zoom = 1;
+        if (this.zoom == 0 || this.zoom == Infinity) this.zoom = 1;
       }
       // render
       this.render();
