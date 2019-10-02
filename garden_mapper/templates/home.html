@@ -338,6 +338,8 @@ var app = new Vue({
             const location = this.transformToPixels(observation);
             if (this.distance(location.px, location.py, x, y) < 10) {
               this.plantObserveName = plant.name;
+              this.plantObserveX = world.x;
+              this.plantObserveY = world.y;
               this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
               return;
             }
