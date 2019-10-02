@@ -102,10 +102,12 @@ def garden_details(request):
     garden = models.Garden.objects.get(id=garden_id)
     if garden.user != request.user: return HttpResponse(status=404)
     references = models.Reference.objects.filter(garden_id=garden_id)
+    context = models.Context.objects.filter(garden_id=garden_id)
     plants = models.Plant.objects.filter(garden_id=garden_id)
     observations = models.Observation.objects.filter(plant__garden_id=garden_id)
     result = {
         'references': [i for i in references.values()],
+        'context': [i for i in context.values()],
         'plants': {i['id']: i for i in plants.values()},
     }
     for i in result['plants']: result['plants'][i]['observations'] = []
