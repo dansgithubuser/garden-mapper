@@ -431,22 +431,23 @@ var app = new Vue({
       this.references = references;
       this.context = context;
       this.plants = plants;
-      // get extent of garden
-      if (references.length == 0 && plants.length == 0) return;
-      var entities = references;
-      for (const plant of plants) entities = entities.concat(plant.observations);
-      var xi, yi, xf, yf;
-      for (const i of entities) {
-        if (xi == undefined || i.x < xi) xi = i.x;
-        if (yi == undefined || i.y < yi) yi = i.y;
-        if (xf == undefined || i.x > xf) xf = i.x;
-        if (yf == undefined || i.y > yf) yf = i.y;
+      if (references.length || plants.length) {
+        // get extent of garden
+        var entities = references;
+        for (const plant of plants) entities = entities.concat(plant.observations);
+        var xi, yi, xf, yf;
+        for (const i of entities) {
+          if (xi == undefined || i.x < xi) xi = i.x;
+          if (yi == undefined || i.y < yi) yi = i.y;
+          if (xf == undefined || i.x > xf) xf = i.x;
+          if (yf == undefined || i.y > yf) yf = i.y;
+        }
+        // center and zoom
+        this.x = (xi + xf) / 2;
+        this.y = (yi + yf) / 2;
+        this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
+        if (this.zoom == 0) this.zoom = 1;
       }
-      // center and zoom
-      this.x = (xi + xf) / 2;
-      this.y = (yi + yf) / 2;
-      this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
-      if (this.zoom == 0) this.zoom = 1;
       // render
       this.render();
     },
