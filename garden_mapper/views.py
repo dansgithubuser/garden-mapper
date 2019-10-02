@@ -107,7 +107,10 @@ def garden_details(request):
     observations = models.Observation.objects.filter(plant__garden_id=garden_id)
     result = {
         'references': [i for i in references.values()],
-        'context': [i for i in context.values()],
+        'context': [
+            i.update(instructions=json.loads(i['instructions'])) or i
+            for i in context.values()
+        ],
         'plants': {i['id']: i for i in plants.values()},
     }
     for i in result['plants']: result['plants'][i]['observations'] = []
