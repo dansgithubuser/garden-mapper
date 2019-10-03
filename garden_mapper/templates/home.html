@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load static %}
+
 {% block content %}
   <!-- header -->
   <a href='/signup'>Signup</a>
@@ -9,9 +11,11 @@
   {% endif %}
   <br>
   <!-- canvas -->
-  <canvas id='canvas' width=800 height=600 style='border-style:outset'>
-    <p>Your browser does not support the canvas element.</p>
-  </canvas>
+  <div style='background-color: grey; display: inline-flex; margin-top: 3px'>
+    <canvas id='canvas' width=800 height=600 style='margin: 3px'>
+      <p>Your browser does not support the canvas element.</p>
+    </canvas>
+  </div>
   <br>
   <!-- controls -->
   <div id='app'>
@@ -19,8 +23,13 @@
       <h2>gardens</h2>
       <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails()'><br>
       <h3>create</h3>
-      <input type='text' v-model='gardenCreateName'><br>
+      <input type='text' v-model='gardenCreateName' placeholder='name'><br>
       <input type='button' value='create' @click='gardenCreate()'>
+      <h2>visual mode</h2>
+      <input type='radio' id='sel'  value='sel'  v-model='visualMode'><label for='sel' >select          </label><br>
+      <input type='radio' id='ref'  value='ref'  v-model='visualMode'><label for='ref' >create reference</label><br>
+      <input type='radio' id='ctx'  value='ctx'  v-model='visualMode'><label for='ctx' >create context  </label><br>
+      <input type='radio' id='plnt' value='plnt' v-model='visualMode'><label for='plnt'>create plant    </label><br>
     </div>
     <div style='float:left; padding-right:2em'>
       <h2>references</h2>
@@ -42,20 +51,22 @@
       <input type='radio' id='s' value='s' v-model='referencePrefer'><label for='s'>south</label>
       <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
       <h3>create</h3>
-      <input type='text' v-model='referenceCreateName'>name<br>
+      <input type='text' v-model='referenceCreateName' placeholder='name'><br>
       <input type='number' v-model.number='referenceCreateX'>x<br>
       <input type='number' v-model.number='referenceCreateY'>y<br>
       <input type='button' value='create' @click='referenceCreate()'>
+      <h2>location</h2>
+      <input type='number' v-model.number='locationD1' placeholder='distance from reference 1'>R1<br>
+      <input type='number' v-model.number='locationD2' placeholder='distance from reference 2'>R2<br>
     </div>
     <div style='float:left; padding-right:2em'>
       <h2>plants</h2>
-      <input type='text' v-model='plantObserveName'>name<br>
+      <input type='text' v-model='plantObserveName' placeholder='name'><br>
+      <input type='number' v-model.number='plantObserveX'>x<br>
+      <input type='number' v-model.number='plantObserveY'>y<br>
       <input type='button' value='observe' @click='plantObserve()'>
-      <h3>location</h3>
-      <input type='number' v-model.number='plantObserveD1'>distance from reference 1<br>
-      <input type='number' v-model.number='plantObserveD2'>distance from reference 2<br>
       <h3>icon</h3>
-      <input type='text' v-model='plantObserveIconParamsCopyFrom'><input type='button' value='copy' @click='iconParamsCopy'><br>
+      <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
       <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
       <div v-for='v, k in plantObserveIconParams'>
         <h4>v{ k }v</h4>
@@ -80,7 +91,11 @@
   {% else %}
     <script src='https://cdn.jsdelivr.net/npm/vue'></script>
   {% endif %}
-  <script>
+  <script type='module'>
+
+import {
+  listenToTouches,
+} from '{% static 'obvious.js' %}'
 
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
 const CANVAS = document.getElementById('canvas');
@@ -128,6 +143,7 @@ var app = new Vue({
     'gardenCreateName': '',
     'gardens': [],
     'gardenId': null,
+    'visualMode': 'sel',
     'referenceCreateName': '',
     'referenceCreateX': '',
     'referenceCreateY': '',
@@ -135,9 +151,11 @@ var app = new Vue({
     'reference1': null,
     'reference2': null,
     'referencePrefer': 'n',
+    'locationD1': '',
+    'locationD2': '',
     'plantObserveName': '',
-    'plantObserveD1': '',
-    'plantObserveD2': '',
+    'plantObserveX': '',
+    'plantObserveY': '',
     'plantObserveIconParamsCopyFrom': '',
     'plantObserveIconParams': {'root': constructIconParams(true)},
     'plants': [],
@@ -158,16 +176,22 @@ var app = new Vue({
     },
     // math
     transformToPixels(point) {
-      return {
-        px:  (point.x - this.x) * this.zoom + CANVAS.width  / 2,
-        py: -(point.y - this.y) * this.zoom + CANVAS.height / 2,
+      const s = {
+        x:  (point.x - this.x) * this.zoom + CANVAS.width  / 2,
+        y: -(point.y - this.y) * this.zoom + CANVAS.height / 2,
       };
+      s.px = s.x;
+      s.py = s.y;
+      return s;
     },
     transformToWorld(point) {
-      return {
-        x: (point.x - CANVAS.width  / 2) / this.zoom + this.x,
-        y: (point.y - CANVAS.height / 2) / this.zoom + this.y,
+      const s = {
+        x:  (point.x - CANVAS.width  / 2) / this.zoom + this.x,
+        y: -(point.y - CANVAS.height / 2) / this.zoom + this.y,
       };
+      s.wx = s.x;
+      s.wy = s.y;
+      return s;
     },
     distance(xi, yi, xf, yf) {
       return Math.sqrt(Math.pow(xf - xi, 2) + Math.pow(yf - yi, 2));
@@ -185,8 +209,8 @@ var app = new Vue({
         alert('references not selected');
         return;
       }
-      const d1 = this.plantObserveD1;
-      const d2 = this.plantObserveD2;
+      const d1 = this.locationD1;
+      const d2 = this.locationD2;
       // create a new coordinate system (p, q) with r1 at origin and r2 and (d, 0)
       const d = this.distance(r1.x, r1.y, r2.x, r2.y);
       const i = {};
@@ -201,11 +225,16 @@ var app = new Vue({
         x: r1.x + (r2.x - r1.x) / d * i.p - (r2.y - r1.y) / d * i.q,
         y: r1.y + (r2.y - r1.y) / d * i.p - (r2.x - r1.x) / d * i.q,
       };
-      // return preferred
-      if (this.referencePrefer == 'n') return a.y > b.y ? a : b;
-      if (this.referencePrefer == 'e') return a.x > b.x ? a : b;
-      if (this.referencePrefer == 's') return a.y < b.y ? a : b;
-      if (this.referencePrefer == 'w') return a.x < b.x ? a : b;
+      // select preferred
+      var result;
+      if (this.referencePrefer == 'n') result = a.y > b.y ? a : b;
+      if (this.referencePrefer == 'e') result = a.x > b.x ? a : b;
+      if (this.referencePrefer == 's') result = a.y < b.y ? a : b;
+      if (this.referencePrefer == 'w') result = a.x < b.x ? a : b;
+      this.referenceCreateX = result.x;
+      this.referenceCreateY = result.y;
+      this.plantObserveX = result.x;
+      this.plantObserveY = result.y;
     },
     // rendering
     renderSegment(x, y, angle, params, rand, split) {
@@ -259,13 +288,31 @@ var app = new Vue({
       }
     },
     render() {
-      CONTEXT.clearRect(0, 0, CANVAS.width, CANVAS.height);
+      CONTEXT.fillStyle = 'white';
+      CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
+      // references
       for (const i of this.references) {
         const { px, py } = this.transformToPixels(i);
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
         CONTEXT.stroke();
       }
+      // context
+      for (const i of this.context) {
+        switch (i.instructions.op) {
+          case 'lines':
+            CONTEXT.beginPath();
+            var f = CONTEXT.moveTo.bind(CONTEXT);
+            for (const j of i.instructions.points){
+              const p = this.transformToPixels(j);
+              f(p.x, p.y);
+              f = CONTEXT.lineTo.bind(CONTEXT);
+            }
+            CONTEXT.stroke();
+            break;
+        }
+      }
+      // plants
       for (const i of this.plants) {
         var { x, y, icon_params } = this.plantObservation(i);
         if (i.name == this.plantObserveName)
@@ -278,15 +325,52 @@ var app = new Vue({
       }
     },
     // events
-    mouseUp(evt) {
-      for (const plant of this.plants) {
-        const observation = this.plantObservation(plant);
-        const location = this.transformToPixels(observation);
-        if (this.distance(location.px, location.py, evt.offsetX, evt.offsetY) < 10) {
-          this.plantObserveName = plant.name;
-          this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
-          return;
-        }
+    onEnd(id, x, y) {
+      const world = this.transformToWorld({ x, y });
+      const round = {
+        x: Math.round(world.x * 1000) / 1000,
+        y: Math.round(world.y * 1000) / 1000,
+      };
+      switch (this.visualMode) {
+        case 'sel':
+          for (const plant of this.plants) {
+            const observation = this.plantObservation(plant);
+            const location = this.transformToPixels(observation);
+            if (this.distance(location.px, location.py, x, y) < 10) {
+              this.plantObserveName = plant.name;
+              this.plantObserveX = world.x;
+              this.plantObserveY = world.y;
+              this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
+              return;
+            }
+          }
+          break;
+        case 'ref':
+          if (!this.referenceCreateName) return;
+          this.referenceCreateX = round.x;
+          this.referenceCreateY = round.y;
+          this.referenceCreate();
+          break;
+        case 'ctx':
+          if (!this.contextI) {
+            this.contextI = round;
+          } else {
+            this.post('/context_create', {
+              garden: this.gardenId,
+              instructions: JSON.stringify({
+                op: 'lines',
+                points: [this.contextI, round],
+              }),
+            }).then(this.gardenDetails);
+            this.contextI = null;
+          }
+          break;
+        case 'plnt':
+          if (!this.plantObserveName) return;
+          this.plantObserveX = round.x;
+          this.plantObserveY = round.y;
+          this.plantObserve();
+          break;
       }
     },
     // icon params
@@ -343,25 +427,27 @@ var app = new Vue({
       this.post('/garden_create', { name: this.gardenCreateName }).then(this.gardenList);
     },
     async gardenDetails() {
-      const { references, plants } = await fetch(`/garden_details?id=${this.gardenId}`).then(r => r.json());
+      const { references, context, plants } = await fetch(`/garden_details?id=${this.gardenId}`).then(r => r.json());
       this.references = references;
+      this.context = context;
       this.plants = plants;
-      // get extent of garden
-      if (references.length == 0 && plants.length == 0) return;
-      var entities = references;
-      for (const plant of plants) entities = entities.concat(plant.observations);
-      var xi, yi, xf, yf;
-      for (const i of entities) {
-        if (xi == undefined || i.x < xi) xi = i.x;
-        if (yi == undefined || i.y < yi) yi = i.y;
-        if (xf == undefined || i.x > xf) xf = i.x;
-        if (yf == undefined || i.y > yf) yf = i.y;
+      if (references.length || plants.length) {
+        // get extent of garden
+        var entities = references;
+        for (const plant of plants) entities = entities.concat(plant.observations);
+        var xi, yi, xf, yf;
+        for (const i of entities) {
+          if (xi == undefined || i.x < xi) xi = i.x;
+          if (yi == undefined || i.y < yi) yi = i.y;
+          if (xf == undefined || i.x > xf) xf = i.x;
+          if (yf == undefined || i.y > yf) yf = i.y;
+        }
+        // center and zoom
+        this.x = (xi + xf) / 2;
+        this.y = (yi + yf) / 2;
+        this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
+        if (this.zoom == 0 || this.zoom == Infinity) this.zoom = 1;
       }
-      // center and zoom
-      this.x = (xi + xf) / 2;
-      this.y = (yi + yf) / 2;
-      this.zoom = Math.min(CANVAS.width / (xf - xi), CANVAS.height / (yf - yi)) * 0.8;
-      if (this.zoom == 0) this.zoom = 1;
       // render
       this.render();
     },
@@ -376,12 +462,12 @@ var app = new Vue({
     async plantObserve() {
       // gather observation from user
       var location;
-      if (this.plantObserveD1 != '' && this.plantObserveD2 != '')
-        location = this.calculateXY();
+      if (this.plantObserveX != '' && this.plantObserveY != '')
+        location = { x: this.plantObserveX, y: this.plantObserveY };
       var iconParams = this.iconParamsNest(this.plantObserveIconParams);
       // ensure plant exists
       var plantId = null;
-      for (i of this.plants)
+      for (const i of this.plants)
         if (i.name == this.plantObserveName) {
           plantId = i.id;
           if (location == undefined) location = this.plantObservation(i);
@@ -408,13 +494,24 @@ var app = new Vue({
     plantObserveName() {
       this.render();
     },
+    locationD1() {
+      this.calculateXY();
+    },
+    locationD2() {
+      this.calculateXY();
+    },
   },
   mounted() {
     this.gardenList();
   },
 });
 
-CANVAS.addEventListener('mouseup', app.mouseUp);
+listenToTouches(CANVAS, {
+  onEnd: app.onEnd,
+});
+
+CONTEXT.fillStyle = 'white';
+CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
   </script>
 {% endblock %}

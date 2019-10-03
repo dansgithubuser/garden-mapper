@@ -1,3 +1,3 @@
 # todo
 - input garden
-- contribute back to djangogo
+- mobile plant observing

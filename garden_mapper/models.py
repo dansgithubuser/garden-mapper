@@ -11,6 +11,10 @@ class Reference(models.Model):
     x = models.FloatField()
     y = models.FloatField()
 
+class Context(models.Model):
+    garden = models.ForeignKey(Garden, on_delete=models.CASCADE)
+    instructions = models.TextField()
+
 class Plant(models.Model):
     garden = models.ForeignKey(Garden, on_delete=models.CASCADE)
     name = models.TextField()
