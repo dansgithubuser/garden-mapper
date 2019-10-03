@@ -63,7 +63,7 @@ def _crudify(name, model):
     def retrieve(request):
         params = h_params(request, 'GET')
         if 'id' in params:
-            instance = model.objects.get(params['id'])
+            instance = model.objects.get(id=params['id'])
             if not h_permitted(instance, request): return HttpResponse(status=404)
             return JsonResponse({'item': model_to_dict(instance)})
         else:
@@ -78,13 +78,13 @@ def _crudify(name, model):
             return HttpResponse(status=400)
     def update(request):
         params = h_params(request)
-        instance = model.objects.get(params['id'])
+        instance = model.objects.get(id=params['id'])
         if not h_permitted(instance, request): return HttpResponse(status=404)
         model.objects.update(**h_writify(h_filter(request.POST)))
         return HttpResponse(status=204)
     def delete(request):
         params = h_params(request)
-        instance = model.objects.get(params['id'])
+        instance = model.objects.get(id=params['id'])
         if not h_permitted(instance, request): return HttpResponse(status=404)
         instance.delete()
         return HttpResponse(status=204)

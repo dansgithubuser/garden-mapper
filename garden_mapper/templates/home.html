@@ -25,11 +25,16 @@
       <h3>create</h3>
       <input type='text' v-model='gardenCreateName' placeholder='name'><br>
       <input type='button' value='create' @click='gardenCreate()'>
-      <h2>visual mode</h2>
-      <input type='radio' id='sel'  value='sel'  v-model='visualMode'><label for='sel' >select          </label><br>
-      <input type='radio' id='ref'  value='ref'  v-model='visualMode'><label for='ref' >create reference</label><br>
-      <input type='radio' id='ctx'  value='ctx'  v-model='visualMode'><label for='ctx' >create context  </label><br>
-      <input type='radio' id='plnt' value='plnt' v-model='visualMode'><label for='plnt'>create plant    </label><br>
+      <h2>visual</h2>
+      <h3>mode</h3>
+      <input type='radio' id='select' value='select' v-model='visualMode'><label for='select'>select</label><br>
+      <input type='radio' id='create' value='create' v-model='visualMode'><label for='create'>create</label><br>
+      <h3>subject</h3>
+      <input type='radio' id='reference' value='reference' v-model='visualSubject'><label for='reference'>reference</label><br>
+      <input type='radio' id='context'   value='context'   v-model='visualSubject'><label for='context'  >context  </label><br>
+      <input type='radio' id='plant'     value='plant'     v-model='visualSubject'><label for='plant'    >plant    </label><br>
+      <h2>edit</h2>
+      <input type='button' value='delete' @click='editDel()'>
     </div>
     <div style='float:left; padding-right:2em'>
       <h2>references</h2>
@@ -95,6 +100,7 @@
 
 import {
   listenToTouches,
+  randomElement,
 } from '{% static 'obvious.js' %}'
 
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
@@ -143,7 +149,8 @@ var app = new Vue({
     gardenCreateName: '',
     gardens: [],
     gardenId: null,
-    visualMode: 'sel',
+    visualMode: 'select',
+    visualSubject: 'plant',
     referenceCreateName: '',
     referenceCreateX: '',
     referenceCreateY: '',
@@ -162,6 +169,7 @@ var app = new Vue({
     x: 0,
     y: 0,
     zoom: 1, // zoom = pixels / observation_units
+    selected: null,
   }),
   methods: {
     post(url, body) {
@@ -288,17 +296,24 @@ var app = new Vue({
       }
     },
     render() {
+      const selectionPrep = (subject, i) => {
+        const isSelected = this.visualSubject == subject && this.selected && this.selected.id == i.id;
+        CONTEXT.strokeStyle = isSelected ? 'skyblue' : 'black';
+        return isSelected;
+      };
       CONTEXT.fillStyle = 'white';
       CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
       // references
       for (const i of this.references) {
         const { px, py } = this.transformToPixels(i);
+        selectionPrep('reference', i);
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
         CONTEXT.stroke();
       }
       // context
       for (const i of this.context) {
+        selectionPrep('context', i);
         switch (i.instructions.op) {
           case 'lines':
             CONTEXT.beginPath();
@@ -314,8 +329,9 @@ var app = new Vue({
       }
       // plants
       for (const i of this.plants) {
+        const isSelected = selectionPrep('plant', i);
         var { x, y, icon_params } = this.plantObservation(i);
-        if (i.name == this.plantObserveName)
+        if (isSelected)
           icon_params = this.iconParamsNest(this.plantObserveIconParams);
         const { px, py } = this.transformToPixels({x, y});
         CONTEXT.beginPath();
@@ -332,46 +348,86 @@ var app = new Vue({
         y: Math.round(world.y * 1000) / 1000,
       };
       switch (this.visualMode) {
-        case 'sel':
-          for (const plant of this.plants) {
-            const observation = this.plantObservation(plant);
-            const location = this.transformToPixels(observation);
-            if (this.distance(location.px, location.py, x, y) < 10) {
-              this.plantObserveName = plant.name;
-              this.plantObserveX = world.x;
-              this.plantObserveY = world.y;
-              this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
-              return;
+        case 'select':
+          const getNear = (array, x, y) => {
+            const potentials = [];
+            for (const i of array) {
+              const location = this.transformToPixels(i);
+              if (this.distance(location.px, location.py, x, y) < 10)
+                potentials.push(i);
+            }
+            return randomElement(potentials);
+          }
+          var near;
+          switch (this.visualSubject) {
+            case 'reference': {
+              near = getNear(this.references, x, y);
+              break;
+            }
+            case 'context': {
+              near = getNear(
+                this.context.reduce((r, i) => {
+                  switch (i.instructions.op) {
+                    case 'lines':
+                      for (const j of i.instructions.points)
+                        r.push({ x: j.x, y: j.y, id: i.id });
+                      return r;
+                  }
+                }, []),
+                x, y,
+              );
+              break;
+            }
+            case 'plant': {
+              near = getNear(
+                this.plants.reduce((r, i) => {
+                  const { x, y, icon_params } = this.plantObservation(i);
+                  r.push({ x, y, id: i.id, icon_params, plant: i });
+                  return r;
+                }, []),
+                x, y,
+              );
+              if (near) {
+                this.plantObserveName = near.plant.name;
+                this.plantObserveX = near.x;
+                this.plantObserveY = near.y;
+                this.plantObserveIconParams = this.iconParamsFlatten(near.icon_params);
+              }
+              break;
             }
           }
+          this.selected = near;
           break;
-        case 'ref':
-          if (!this.referenceCreateName) return;
-          this.referenceCreateX = round.x;
-          this.referenceCreateY = round.y;
-          this.referenceCreate();
-          break;
-        case 'ctx':
-          if (!this.contextI) {
-            this.contextI = round;
-          } else {
-            this.post('/context_create', {
-              garden: this.gardenId,
-              instructions: JSON.stringify({
-                op: 'lines',
-                points: [this.contextI, round],
-              }),
-            }).then(this.gardenDetails);
-            this.contextI = null;
+        case 'create':
+          switch (this.visualSubject) {
+            case 'reference':
+              if (!this.referenceCreateName) return;
+              this.referenceCreateX = round.x;
+              this.referenceCreateY = round.y;
+              this.referenceCreate();
+              break;
+            case 'context':
+              if (!this.contextI) {
+                this.contextI = round;
+              } else {
+                this.post('/context_create', {
+                  garden: this.gardenId,
+                  instructions: JSON.stringify({
+                    op: 'lines',
+                    points: [this.contextI, round],
+                  }),
+                }).then(this.gardenDetails);
+                this.contextI = null;
+              }
+              break;
+            case 'plant':
+              if (!this.plantObserveName) return;
+              this.plantObserveX = round.x;
+              this.plantObserveY = round.y;
+              this.plantObserve();
+              break;
           }
-          break;
-        case 'plnt':
-          if (!this.plantObserveName) return;
-          this.plantObserveX = round.x;
-          this.plantObserveY = round.y;
-          this.plantObserve();
-          break;
-      }
+      }// switch (this.visualMode)
     },
     // icon params
     iconParamsFlatten(params) {
@@ -430,7 +486,11 @@ var app = new Vue({
       const { references, context, plants } = await fetch(`/garden_details?id=${this.gardenId}`).then(r => r.json());
       this.references = references;
       this.context = context;
-      this.plants = plants;
+      this.plants = plants.filter((i) => {
+        if (i.observations.length) return true;
+        this.post('/plant_delete', { id: i.id });
+        return false;
+      });
       if (references.length || plants.length) {
         // get extent of garden
         var entities = references;
@@ -451,6 +511,24 @@ var app = new Vue({
       // render
       this.render();
     },
+    editDel() {
+      var url;
+      var id = this.selected.id;
+      switch (this.visualSubject) {
+        case 'reference':
+          url = '/reference_delete';
+          break;
+        case 'context':
+          url = '/context_delete';
+          break;
+        case 'plant':
+          url = '/observation_delete';
+          id = this.plantObservation(this.selected.plant).id;
+          this.selected = null;
+          break;
+      }
+      this.post(url, { id }).then(this.gardenDetails);
+    },
     referenceCreate() {
       this.post('/reference_create', {
         garden: this.gardenId,
@@ -467,12 +545,8 @@ var app = new Vue({
       var iconParams = this.iconParamsNest(this.plantObserveIconParams);
       // ensure plant exists
       var plantId = null;
-      for (const i of this.plants)
-        if (i.name == this.plantObserveName) {
-          plantId = i.id;
-          if (location == undefined) location = this.plantObservation(i);
-          break;
-        }
+      if (this.visualSubject == 'plant' && this.selected)
+        plantId = this.selected.id;
       if (!plantId) plantId = await this.post('/plant_create', {
         garden: this.gardenId,
         name: this.plantObserveName,
@@ -486,19 +560,23 @@ var app = new Vue({
         icon_params: JSON.stringify(iconParams),
         gone: false,
       });
+      this.selected = null;
       // update
       this.gardenDetails();
     },
   },
   watch: {
-    plantObserveName() {
-      this.render();
-    },
     locationD1() {
       this.calculateXY();
     },
     locationD2() {
       this.calculateXY();
+    },
+    selected() {
+      this.render();
+    },
+    visualSubject() {
+      this.render();
     },
   },
   mounted() {
@@ -512,6 +590,12 @@ listenToTouches(CANVAS, {
 
 CONTEXT.fillStyle = 'white';
 CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
+
+window.refs = {
+  CONTEXT,
+  CANVAS,
+  app,
+};
 
   </script>
 {% endblock %}
