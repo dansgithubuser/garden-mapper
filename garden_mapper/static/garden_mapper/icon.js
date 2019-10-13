@@ -1,14 +1,16 @@
 export function constructIconParams(seed = false) {
   const result = {
     size: 0.02,
+    sizeStep: 0,
+    sizeVariance: 0,
     segments: 2,
     split: {
       number: 2,
       numberVariance: 0,
       angle: {
-        start: -0.2,
-        step: 0.4,
-        variance: 0.1,
+        start: -0.1,
+        step: 0.2,
+        variance: 0.05,
         toward: 0,
       },
     },
@@ -22,7 +24,7 @@ export function constructIconParams(seed = false) {
   return result;
 }
 
-function renderSegment(self, x, y, angle, params, rand, split) {
+function renderSegment(self, x, y, angle, size, params, rand, split) {
   var sign = 1;
   if (params.split.angle.toward) {
     let a = angle / (2 * Math.PI);
@@ -38,8 +40,10 @@ function renderSegment(self, x, y, angle, params, rand, split) {
     + split * params.split.angle.step
   );
   const angleV = angleF + 2 * Math.PI * params.split.angle.variance * rand.next(-1, 1);
-  const xf = x + params.size * Math.sin(angleV);
-  const yf = y + params.size * Math.cos(angleV);
+  const sizeF = size + (params.sizeStep || 0);
+  const sizeV = sizeF + (params.sizeVariance || 0) * rand.next();
+  const xf = x + sizeV * Math.sin(angleV);
+  const yf = y + sizeV * Math.cos(angleV);
   const d = self.math.distance(x, y, xf, yf);
   const w = {
     x: -(yf - y) / d * params.width,
@@ -66,24 +70,49 @@ function renderSegment(self, x, y, angle, params, rand, split) {
   }
   context.stroke();
   context.fill();
-  return { x: xf, y: yf, angle: angleF };
+  return { x: xf, y: yf, angle: angleF, size: sizeF };
 }
 
 export function renderIcon(self, x, y, params) {
   const rand = new self.math.Rand(params.seed);
-  const work = [{ x, y, angle: 0, generation: 1, params }];
+  const work = [{
+    x, y,
+    angle: 0,
+    size: params.size,
+    generation: 1,
+    params,
+  }];
   var totalWork = 0;
   while (work.length) {
     const segment = work.pop();
     var splits = segment.params.split.number;
     splits += rand.nextI() % ((segment.params.split.numberVariance || 0) + 1);
     for (var split = 0; split < splits; ++split) {
-      const { x, y, angle } = renderSegment(self, segment.x, segment.y, segment.angle, segment.params, rand, split);
-      if (segment.generation < segment.params.segments)
-        work.push({ x, y, angle, generation: segment.generation + 1, params: segment.params });
+      const {
+        x, y,
+        angle,
+        size,
+      } = renderSegment(self,
+        segment.x, segment.y,
+        segment.angle,
+        segment.size,
+        segment.params, rand, split,
+      );
+      if (segment.generation < segment.params.segments) work.push({
+        x, y,
+        angle,
+        size,
+        generation: segment.generation + 1,
+        params: segment.params,
+      });
       const children = segment.params.children;
-      for (const k in children)
-        work.push({ x, y, angle, generation: 1, params: children[k]});
+      for (const k in children) work.push({
+        x, y,
+        angle,
+        size: children[k].size,
+        generation: 1,
+        params: children[k],
+      });
     }
     ++totalWork;
     if (totalWork>40) break;
@@ -121,5 +150,6 @@ export const iconParams = {
   cauliflower: {"root":{"size":0,"segments":1,"split":{"number":1,"angle":{"start":0,"step":0,"variance":0}},"width":0,"corrugation":{"amplitude":0,"number":0},"seed":15097425},"root.1":{"size":0.03,"segments":3,"split":{"number":3,"angle":{"start":-0.2,"step":0.4,"variance":0.1}},"width":0.03,"corrugation":{"amplitude":0.1,"number":10}},"root.2":{"size":0.3,"segments":1,"split":{"number":12,"angle":{"start":0,"step":0.2,"variance":0.1}},"width":0.1,"corrugation":{"amplitude":0.3,"number":1}}},
   corn: {"root":{"size":0.2,"segments":4,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.01}},"width":0.005,"corrugation":{"amplitude":0,"number":2},"seed":749801},"root.1":{"size":0.3,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0}},"width":0.01,"corrugation":{"amplitude":0,"number":2}},"root.2":{"size":0.1,"segments":1,"split":{"number":2,"numberVariance":0,"angle":{"start":-0.15,"step":0.3,"variance":0.1}},"width":0.005,"corrugation":{"amplitude":0,"number":2}},"root.2.3":{"size":0.1,"segments":2,"split":{"number":1,"numberVariance":0,"angle":{"start":-0.2,"step":0.4,"variance":0.1,"toward":0.01}},"width":0.005,"corrugation":{"amplitude":0,"number":2}}},
   raspberry: {"root":{"size":0,"segments":1,"split":{"number":5,"numberVariance":0,"angle":{"start":0,"step":0.2,"variance":0}},"width":0,"corrugation":{"amplitude":0,"number":0},"seed":10839999},"root.1":{"size":0.05,"segments":4,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.1,"toward":0}},"width":0,"corrugation":{"amplitude":0,"number":2}},"root.1.2":{"size":0.05,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.25,"toward":0}},"width":0.05,"corrugation":{"amplitude":0.1,"number":5}}},
+  sage: {"root":{"size":0.05,"segments":3,"split":{"number":1,"angle":{"start":0,"step":0,"variance":0.1},"numberVariance":1},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":9353382,"sizeVariance":0.1},"root.1":{"size":0.07,"segments":1,"split":{"number":3,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.1}},"width":0.03,"corrugation":{"amplitude":0.1,"number":2},"sizeVariance":0.05}},
   strawberry: {"root":{"size":0.1,"segments":1,"split":{"number":5,"angle":{"start":0,"step":0.2,"variance":0.05}},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":15857556},"root.1":{"size":0.05,"segments":1,"split":{"number":3,"angle":{"start":-0.25,"step":0.25,"variance":0.05}},"width":0.05,"corrugation":{"amplitude":0.1,"number":10}}},
 };

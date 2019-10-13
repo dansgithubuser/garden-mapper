@@ -82,6 +82,8 @@
         <div v-for='v, k in plantObserveIconParams'>
           <h4>v{ k }v</h4>
           <input type='number' @change='iconParamsChanged' v-model.number='v.size'>size<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.sizeStep'>size-step<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.sizeVariance'>size-variance<br>
           <input type='number' @change='iconParamsChanged' v-model.number='v.segments'>segments<br>
           <input type='number' @change='iconParamsChanged' v-model.number='v.split.number'>split-number<br>
           <input type='number' @change='iconParamsChanged' v-model.number='v.split.numberVariance'>split-number-variance<br>
