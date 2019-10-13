@@ -71,6 +71,11 @@
       <input type='number' v-model.number='plantObserveY'>y<br>
       <input type='button' value='observe' @click='plantObserve()'>
       <h3>icon</h3>
+      <select v-model='plantObserveIconParamsSelection'>
+        <option v-for='v, k in plantObserveIconParamsOptions'>
+          v{ k }v
+        </option>
+      </select><input type='button' value='apply' @click='iconParamsSelected'><br>
       <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
       <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
       <div v-for='v, k in plantObserveIconParams'>
@@ -78,6 +83,7 @@
         <input type='number' @change='iconParamsChanged' v-model.number='v.size'>size<br>
         <input type='number' @change='iconParamsChanged' v-model.number='v.segments'>segments<br>
         <input type='number' @change='iconParamsChanged' v-model.number='v.split.number'>split-number<br>
+        <input type='number' @change='iconParamsChanged' v-model.number='v.split.numberVariance'>split-number-variance<br>
         <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.start'>split-angle-start<br>
         <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.step'>split-angle-step<br>
         <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.variance'>split-angle-variance<br>
@@ -130,6 +136,8 @@ var app = new Vue({
     plantObserveName: '',
     plantObserveX: '',
     plantObserveY: '',
+    plantObserveIconParamsSelection: '',
+    plantObserveIconParamsOptions: icon.iconParams,
     plantObserveIconParamsCopyFrom: '',
     plantObserveIconParams: { root: icon.constructIconParams(true) },
     plants: [],
@@ -240,6 +248,12 @@ var app = new Vue({
     },
     iconParamsChanged() {
       this.render();
+    },
+    iconParamsSelected() {
+      if (this.plantObserveIconParamsSelection == '') return;
+      this.plantObserveIconParams = icon.iconParams[this.plantObserveIconParamsSelection];
+      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
+      this.iconParamsChanged();
     },
     iconParamsCopy() {
       for (const i of this.plants)
@@ -375,6 +389,7 @@ window.refs = {
   CANVAS,
   app,
 };
+window.exportIconParams = () => JSON.stringify(app.plantObserveIconParams, null, 2);
 
   </script>
 {% endblock %}

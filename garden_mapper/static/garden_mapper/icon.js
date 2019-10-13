@@ -4,6 +4,7 @@ export function constructIconParams(seed = false) {
     segments: 2,
     split: {
       number: 2,
+      numberVariance: 0,
       angle: {
         start: -0.2,
         step: 0.4,
@@ -24,16 +25,16 @@ function renderSegment(self, x, y, angle, params, rand, split) {
   const angleF = angle + 2 * Math.PI * (
     + params.split.angle.start
     + split * params.split.angle.step
-    + params.split.angle.variance * rand.next(-1, 1)
   );
-  const xf = x + params.size * Math.sin(angleF);
-  const yf = y + params.size * Math.cos(angleF);
+  const angleV = angleF + 2 * Math.PI * params.split.angle.variance * rand.next(-1, 1);
+  const xf = x + params.size * Math.sin(angleV);
+  const yf = y + params.size * Math.cos(angleV);
   const d = self.math.distance(x, y, xf, yf);
   const w = {
     x: -(yf - y) / d * params.width,
     y:  (xf - x) / d * params.width,
   };
-  const divisions = params.corrugation.number * 5;
+  const divisions = Math.min(params.corrugation.number * 5 + 8, 40);
   const context = self.canvas.getContext('2d');
   context.fillStyle = 'white';
   context.beginPath();
@@ -60,9 +61,12 @@ function renderSegment(self, x, y, angle, params, rand, split) {
 export function renderIcon(self, x, y, params) {
   const rand = new self.math.Rand(params.seed);
   const work = [{ x, y, angle: 0, generation: 1, params }];
+  var totalWork = 0;
   while (work.length) {
     const segment = work.pop();
-    for (var split = 0; split < segment.params.split.number; ++split) {
+    var splits = segment.params.split.number;
+    splits += rand.nextI() % ((segment.params.split.numberVariance || 0) + 1);
+    for (var split = 0; split < splits; ++split) {
       const { x, y, angle } = renderSegment(self, segment.x, segment.y, segment.angle, segment.params, rand, split);
       if (segment.generation < segment.params.segments)
         work.push({ x, y, angle, generation: segment.generation + 1, params: segment.params });
@@ -70,6 +74,8 @@ export function renderIcon(self, x, y, params) {
       for (const k in children)
         work.push({ x, y, angle, generation: 1, params: children[k]});
     }
+    ++totalWork;
+    if (totalWork>40) break;
   }
 }
 
@@ -97,3 +103,175 @@ export function iconParamsNest(params) {
   }
   return JSON.parse(JSON.stringify(result));
 }
+
+export const iconParams = {
+  asparagus: {
+    "root": {
+      "size": 0.05,
+      "segments": 5,
+      "split": {
+        "number": 1,
+        "angle": {
+          "start": 0,
+          "step": 0,
+          "variance": 0.05
+        },
+        "numberVariance": 0
+      },
+      "width": 0,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      },
+      "seed": 1892642
+    },
+    "root.1": {
+      "size": 0.05,
+      "segments": 1,
+      "split": {
+        "number": 3,
+        "numberVariance": 0,
+        "angle": {
+          "start": -0.25,
+          "step": 0.25,
+          "variance": 0.1
+        }
+      },
+      "width": 0,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      }
+    }
+  },
+  blueberry: {
+    "root": {
+      "size": 0.1,
+      "segments": 3,
+      "split": {
+        "number": 1,
+        "angle": {
+          "start": -0.05,
+          "step": 0.1,
+          "variance": 0.05
+        },
+        "numberVariance": 2
+      },
+      "width": 0,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      },
+      "seed": 1892632
+    },
+    "root.1": {
+      "size": 0.04,
+      "segments": 1,
+      "split": {
+        "number": 1,
+        "numberVariance": 0,
+        "angle": {
+          "start": 0,
+          "step": 0,
+          "variance": 0.2
+        }
+      },
+      "width": 0.03,
+      "corrugation": {
+        "amplitude": 0.1,
+        "number": 2
+      }
+    }
+  },
+  cauliflower: {
+    "root": {
+      "size": 0,
+      "segments": 1,
+      "split": {
+        "number": 1,
+        "angle": {
+          "start": 0,
+          "step": 0,
+          "variance": 0
+        }
+      },
+      "width": 0,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 0
+      },
+      "seed": 5170206
+    },
+    "root.1": {
+      "size": 0.03,
+      "segments": 3,
+      "split": {
+        "number": 3,
+        "angle": {
+          "start": -0.2,
+          "step": 0.4,
+          "variance": 0.1
+        }
+      },
+      "width": 0.03,
+      "corrugation": {
+        "amplitude": 0.1,
+        "number": 10
+      }
+    },
+    "root.2": {
+      "size": 0.3,
+      "segments": 1,
+      "split": {
+        "number": 12,
+        "angle": {
+          "start": 0,
+          "step": 0.2,
+          "variance": 0.1
+        }
+      },
+      "width": 0.1,
+      "corrugation": {
+        "amplitude": 0.3,
+        "number": 1
+      }
+    }
+  },
+  strawberry: {
+    "root": {
+      "size": 0.1,
+      "segments": 1,
+      "split": {
+        "number": 5,
+        "angle": {
+          "start": 0,
+          "step": 0.2,
+          "variance": 0.05
+        }
+      },
+      "width": 0,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      },
+      "seed": 7906174
+    },
+    "root.1": {
+      "size": 0.05,
+      "segments": 1,
+      "split": {
+        "number": 3,
+        "angle": {
+          "start": -0.25,
+          "step": 0.25,
+          "variance": 0.05
+        }
+      },
+      "width": 0.05,
+      "corrugation": {
+        "amplitude": 0.1,
+        "number": 10
+      }
+    }
+  },
+};
