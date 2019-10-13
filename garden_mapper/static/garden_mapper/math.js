@@ -48,16 +48,19 @@ export function calculateXY(r1, r2, d1, d2) {
   let q be the distance from r1 + p*p_hat to x
   then
   1) p^2 + q^2 = d1^2
-  2) (d-p)^2 + q^2 = d2^2
-  (1) - (2): p^2 - (d-p)^2 = d1^2 - d2^2
-  => p^2 - (p^2 - 2*d*p + d^2) = d1^2 - d2^2
-  => - 2*d*p + d^2 = d1^2 - d2^2
-  => p = -(d1^2 - d2^2 - d^2) / (2*d)
+  2) (p-d)^2 + q^2 = d2^2
+  (1) - (2): p^2 - (p-d)^2 = d1^2 - d2^2
+  => p^2 - (p^2 - 2*p*d + d^2) = d1^2 - d2^2
+  => 2*p*d - d^2 = d1^2 - d2^2
+  => p = (d1^2 - d2^2 + d^2) / (2*d)
   */
   const d = distance(r1.x, r1.y, r2.x, r2.y);
   const i = {};
-  i.p = -(Math.pow(d1, 2) - Math.pow(d2, 2) - Math.pow(d, 2)) / (2 * d);
-  i.q = Math.sqrt(Math.pow(d1, 2) - Math.pow(i.p, 2));
+  i.p = (Math.pow(d1, 2) - Math.pow(d2, 2) + Math.pow(d, 2)) / (2 * d);
+  if (Math.abs(d1) >= Math.abs(i.p))
+    i.q = Math.sqrt(Math.pow(d1, 2) - Math.pow(i.p, 2));
+  else
+    i.q = 0;
   // transform back to (x, y)
   const p_hat = {
     x: (r2.x - r1.x) / d,
