@@ -1,4 +1,4 @@
 # todo
-- garden notes
+- library of icon params
 - input garden
 - mobile plant observing
