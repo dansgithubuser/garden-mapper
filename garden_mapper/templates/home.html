@@ -98,54 +98,21 @@
   {% endif %}
   <script type='module'>
 
-import {
-  listenToTouches,
-  randomElement,
-} from '{% static 'obvious.js' %}'
+import * as events from '{% static 'garden_mapper/events.js' %}'
+import * as icon from '{% static 'garden_mapper/icon.js' %}'
+import * as math from '{% static 'garden_mapper/math.js' %}'
+
+import * as obvious from '{% static 'obvious.js' %}'
 
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
 const CANVAS = document.getElementById('canvas');
 const CONTEXT = CANVAS.getContext('2d');
 
-class Rand {
-  constructor(seed) {
-    this.state = seed;
-  }
-  next(min = 0, max = 1) {
-    this.state ^= this.state << 13;
-    this.state ^= this.state >> 17;
-    this.state ^= this.state << 5;
-    const e30 = 1 << 30;
-    return ((this.state + 2 * e30) / (4 * e30) * (max - min)) + min;
-  }
-}
-
-function constructIconParams(seed = false) {
-  const result = {
-    size: 0.02,
-    segments: 2,
-    split: {
-      number: 2,
-      angle: {
-        start: -0.2,
-        step: 0.4,
-        variance: 0.1,
-      },
-    },
-    width: 0,
-    corrugation: {
-      amplitude: 0,
-      number: 2,
-    },
-  };
-  if (seed) result['seed'] = 1;
-  return result;
-}
-
 var app = new Vue({
   el: '#app',
   delimiters: ['v{', '}v'],
   data: () => ({
+    // interface
     gardenCreateName: '',
     gardens: [],
     gardenId: null,
@@ -164,12 +131,18 @@ var app = new Vue({
     plantObserveX: '',
     plantObserveY: '',
     plantObserveIconParamsCopyFrom: '',
-    plantObserveIconParams: { root: constructIconParams(true) },
+    plantObserveIconParams: { root: icon.constructIconParams(true) },
     plants: [],
+    // view state
     x: 0,
     y: 0,
     zoom: 1, // zoom = pixels / observation_units
     selected: null,
+    // forwarding
+    icon,
+    math,
+    obvious,
+    canvas: CANVAS,
   }),
   methods: {
     post(url, body) {
@@ -181,28 +154,6 @@ var app = new Vue({
         },
         body: JSON.stringify(body),
       });
-    },
-    // math
-    transformToPixels(point) {
-      const s = {
-        x:  (point.x - this.x) * this.zoom + CANVAS.width  / 2,
-        y: -(point.y - this.y) * this.zoom + CANVAS.height / 2,
-      };
-      s.px = s.x;
-      s.py = s.y;
-      return s;
-    },
-    transformToWorld(point) {
-      const s = {
-        x:  (point.x - CANVAS.width  / 2) / this.zoom + this.x,
-        y: -(point.y - CANVAS.height / 2) / this.zoom + this.y,
-      };
-      s.wx = s.x;
-      s.wy = s.y;
-      return s;
-    },
-    distance(xi, yi, xf, yf) {
-      return Math.sqrt(Math.pow(xf - xi, 2) + Math.pow(yf - yi, 2));
     },
     plantObservation(plant) {
       return plant.observations[plant.observations.length - 1];
@@ -217,43 +168,7 @@ var app = new Vue({
         alert('references not selected');
         return;
       }
-      const d1 = this.locationD1;
-      const d2 = this.locationD2;
-      /*
-      create a new coordinate system (p, q) with r1 at origin and r2 at (d, 0)
-      let x be the result
-      let p be the projection of (x - r1) onto (r2 - r1)
-      let p_hat be a unit vector directed from r1 to r2
-      let q be the distance from r1 + p*p_hat to x
-      then
-      1) p^2 + q^2 = d1^2
-      2) (d-p)^2 + q^2 = d2^2
-      (1) - (2): p^2 - (d-p)^2 = d1^2 - d2^2
-      => p^2 - (p^2 - 2*d*p + d^2) = d1^2 - d2^2
-      => - 2*d*p + d^2 = d1^2 - d2^2
-      => p = -(d1^2 - d2^2 - d^2) / (2*d)
-      */
-      const d = this.distance(r1.x, r1.y, r2.x, r2.y);
-      const i = {};
-      i.p = -(Math.pow(d1, 2) - Math.pow(d2, 2) - Math.pow(d, 2)) / (2 * d);
-      i.q = Math.sqrt(Math.pow(d1, 2) - Math.pow(i.p, 2));
-      // transform back to (x, y)
-      const p_hat = {
-        x: (r2.x - r1.x) / d,
-        y: (r2.y - r1.y) / d,
-      };
-      const q_hat = {
-        x: -p_hat.y,
-        y: +p_hat.x,
-      };
-      const a = {
-        x: r1.x + p_hat.x * i.p + q_hat.x * i.q,
-        y: r1.y + p_hat.y * i.p + q_hat.y * i.q,
-      };
-      const b = {
-        x: r1.x + p_hat.x * i.p - q_hat.x * i.q,
-        y: r1.y + p_hat.y * i.p - q_hat.y * i.q,
-      };
+      const { a, b } = math.calculateXY(r1, r2, this.locationD1, this.locationD2);
       // select preferred
       var result;
       if (this.referencePrefer == 'n') result = a.y > b.y ? a : b;
@@ -265,57 +180,6 @@ var app = new Vue({
       this.plantObserveX = result.x;
       this.plantObserveY = result.y;
     },
-    // rendering
-    renderSegment(x, y, angle, params, rand, split) {
-      const angleF = angle + 2 * Math.PI * (
-        + params.split.angle.start
-        + split * params.split.angle.step
-        + params.split.angle.variance * rand.next(-1, 1)
-      );
-      const xf = x + params.size * Math.sin(angleF);
-      const yf = y + params.size * Math.cos(angleF);
-      const d = this.distance(x, y, xf, yf);
-      const w = {
-        x: -(yf - y) / d * params.width,
-        y:  (xf - x) / d * params.width,
-      };
-      const divisions = params.corrugation.number * 5;
-      CONTEXT.fillStyle = 'white';
-      CONTEXT.beginPath();
-      {
-        const { px, py } = this.transformToPixels({ x, y });
-        CONTEXT.moveTo(px, py);
-      }
-      for (var i = 0; i < divisions; ++i) {
-        const theta = (i / (divisions - 1)) * 2 * Math.PI;
-        const p = (1 - Math.cos(theta)) / 2;
-        const q = (    Math.sin(theta)) / 2;
-        const s = 1 + params.corrugation.amplitude * Math.cos(params.corrugation.number * theta);
-        const { px, py } = this.transformToPixels({
-          x: x + (p * (xf - x) + q * w.x) * s,
-          y: y + (p * (yf - y) + q * w.y) * s,
-        });
-        CONTEXT.lineTo(px, py);
-      }
-      CONTEXT.stroke();
-      CONTEXT.fill();
-      return { x: xf, y: yf, angle: angleF };
-    },
-    renderIcon(x, y, params) {
-      const rand = new Rand(params.seed);
-      const work = [{ x, y, angle: 0, generation: 1, params }];
-      while (work.length) {
-        const segment = work.pop();
-        for (var split = 0; split < segment.params.split.number; ++split) {
-          const { x, y, angle } = this.renderSegment(segment.x, segment.y, segment.angle, segment.params, rand, split);
-          if (segment.generation < segment.params.segments)
-            work.push({ x, y, angle, generation: segment.generation + 1, params: segment.params });
-          const children = segment.params.children;
-          for (const k in children)
-            work.push({ x, y, angle, generation: 1, params: children[k]});
-        }
-      }
-    },
     render() {
       const selectionPrep = (subject, i) => {
         const isSelected = this.visualSubject == subject && this.selected && this.selected.id == i.id;
@@ -326,7 +190,7 @@ var app = new Vue({
       CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
       // references
       for (const i of this.references) {
-        const { px, py } = this.transformToPixels(i);
+        const { px, py } = math.transformToPixels(this, i);
         selectionPrep('reference', i);
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
@@ -340,7 +204,7 @@ var app = new Vue({
             CONTEXT.beginPath();
             var f = CONTEXT.moveTo.bind(CONTEXT);
             for (const j of i.instructions.points){
-              const p = this.transformToPixels(j);
+              const p = math.transformToPixels(this, j);
               f(p.x, p.y);
               f = CONTEXT.lineTo.bind(CONTEXT);
             }
@@ -353,130 +217,21 @@ var app = new Vue({
         const isSelected = selectionPrep('plant', i);
         var { x, y, icon_params } = this.plantObservation(i);
         if (isSelected)
-          icon_params = this.iconParamsNest(this.plantObserveIconParams);
-        const { px, py } = this.transformToPixels({x, y});
+          icon_params = icon.iconParamsNest(this.plantObserveIconParams);
+        const { px, py } = math.transformToPixels(this, {x, y});
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, 4, 0, Math.PI);
         CONTEXT.stroke();
-        this.renderIcon(x, y, icon_params);
+        icon.renderIcon(this, x, y, icon_params);
       }
     },
-    // events
     onEnd(id, x, y) {
-      const world = this.transformToWorld({ x, y });
-      const round = {
-        x: Math.round(world.x * 1000) / 1000,
-        y: Math.round(world.y * 1000) / 1000,
-      };
-      switch (this.visualMode) {
-        case 'select':
-          const getNear = (array, x, y) => {
-            const potentials = [];
-            for (const i of array) {
-              const location = this.transformToPixels(i);
-              if (this.distance(location.px, location.py, x, y) < 10)
-                potentials.push(i);
-            }
-            return randomElement(potentials);
-          }
-          var near;
-          switch (this.visualSubject) {
-            case 'reference': {
-              near = getNear(this.references, x, y);
-              break;
-            }
-            case 'context': {
-              near = getNear(
-                this.context.reduce((r, i) => {
-                  switch (i.instructions.op) {
-                    case 'lines':
-                      for (const j of i.instructions.points)
-                        r.push({ x: j.x, y: j.y, id: i.id });
-                      return r;
-                  }
-                }, []),
-                x, y,
-              );
-              break;
-            }
-            case 'plant': {
-              near = getNear(
-                this.plants.reduce((r, i) => {
-                  const { x, y, icon_params } = this.plantObservation(i);
-                  r.push({ x, y, id: i.id, icon_params, plant: i });
-                  return r;
-                }, []),
-                x, y,
-              );
-              if (near) {
-                this.plantObserveName = near.plant.name;
-                this.plantObserveX = near.x;
-                this.plantObserveY = near.y;
-                this.plantObserveIconParams = this.iconParamsFlatten(near.icon_params);
-              }
-              break;
-            }
-          }
-          this.selected = near;
-          break;
-        case 'create':
-          switch (this.visualSubject) {
-            case 'reference':
-              if (!this.referenceCreateName) return;
-              this.referenceCreateX = round.x;
-              this.referenceCreateY = round.y;
-              this.referenceCreate();
-              break;
-            case 'context':
-              if (!this.contextI) {
-                this.contextI = round;
-              } else {
-                this.post('/context_create', {
-                  garden: this.gardenId,
-                  instructions: JSON.stringify({
-                    op: 'lines',
-                    points: [this.contextI, round],
-                  }),
-                }).then(this.gardenDetails);
-                this.contextI = null;
-              }
-              break;
-            case 'plant':
-              if (!this.plantObserveName) return;
-              this.plantObserveX = round.x;
-              this.plantObserveY = round.y;
-              this.plantObserve();
-              break;
-          }
-      }// switch (this.visualMode)
+      events.onEnd(this, id, x, y);
     },
     // icon params
-    iconParamsFlatten(params) {
-      function recurse(params, path = 'root') {
-        var result = { [path]: params };
-        for (const i in params.children)
-          result = { ...result, ...recurse(params.children[i], path + '.' + i) };
-        return result;
-      }
-      const result = JSON.parse(JSON.stringify(recurse(params)));
-      for (const k in result) delete result[k].children;
-      return result;
-    },
-    iconParamsNest(params) {
-      const keys = Object.keys(params).sort();
-      const result = { ...params['root'], children: {} };
-      for (const i of keys.slice(1)) {
-        var node = result;
-        const split = i.split('.');
-        const leaf = split.pop();
-        for (const j of split.slice(1)) node = node.children[j];
-        node.children[leaf] = { ...params[i], children: {} };
-      }
-      return JSON.parse(JSON.stringify(result));
-    },
     iconParamsAddChild(parent) {
       const child = parent + '.' + Object.keys(this.plantObserveIconParams).length;
-      this.$set(this.plantObserveIconParams, child, constructIconParams());
+      this.$set(this.plantObserveIconParams, child, icon.constructIconParams());
       this.iconParamsChanged();
     },
     iconParamsRemoveChild(k) {
@@ -490,7 +245,7 @@ var app = new Vue({
       for (const i of this.plants)
         if (i.name == this.plantObserveIconParamsCopyFrom) {
           const observation = this.plantObservation(i);
-          this.plantObserveIconParams = this.iconParamsFlatten(observation.icon_params);
+          this.plantObserveIconParams = icon.iconParamsFlatten(observation.icon_params);
           break;
         }
       this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
@@ -563,7 +318,7 @@ var app = new Vue({
       var location;
       if (this.plantObserveX != '' && this.plantObserveY != '')
         location = { x: this.plantObserveX, y: this.plantObserveY };
-      var iconParams = this.iconParamsNest(this.plantObserveIconParams);
+      var iconParams = icon.iconParamsNest(this.plantObserveIconParams);
       // ensure plant exists
       var plantId = null;
       if (this.visualSubject == 'plant' && this.selected)
@@ -608,7 +363,7 @@ var app = new Vue({
   },
 });
 
-listenToTouches(CANVAS, {
+obvious.listenToTouches(CANVAS, {
   onEnd: app.onEnd,
 });
 
