@@ -334,7 +334,7 @@ var app = new Vue({
     async plantObserve() {
       // gather observation from user
       var location;
-      if (this.plantObserveX != '' && this.plantObserveY != '')
+      if (this.plantObserveX !== '' && this.plantObserveY !== '')
         location = { x: this.plantObserveX, y: this.plantObserveY };
       var iconParams = icon.iconParamsNest(this.plantObserveIconParams);
       // ensure plant exists
