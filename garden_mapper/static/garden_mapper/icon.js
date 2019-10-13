@@ -9,6 +9,7 @@ export function constructIconParams(seed = false) {
         start: -0.2,
         step: 0.4,
         variance: 0.1,
+        toward: 0,
       },
     },
     width: 0,
@@ -22,7 +23,17 @@ export function constructIconParams(seed = false) {
 }
 
 function renderSegment(self, x, y, angle, params, rand, split) {
-  const angleF = angle + 2 * Math.PI * (
+  var sign = 1;
+  if (params.split.angle.toward) {
+    let a = angle / (2 * Math.PI);
+    a = a - Math.floor(a);
+    let t = params.split.angle.toward;
+    t = t - Math.floor(t);
+    let d = (a - t);
+    d = d - Math.floor(d);
+    if (d < 0.5) sign = -1;
+  }
+  var angleF = angle + sign * 2 * Math.PI * (
     + params.split.angle.start
     + split * params.split.angle.step
   );
@@ -234,6 +245,82 @@ export const iconParams = {
       "corrugation": {
         "amplitude": 0.3,
         "number": 1
+      }
+    }
+  },
+  corn: {
+    "root": {
+      "size": 0.2,
+      "segments": 4,
+      "split": {
+        "number": 1,
+        "numberVariance": 0,
+        "angle": {
+          "start": 0,
+          "step": 0,
+          "variance": 0.01
+        }
+      },
+      "width": 0.005,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      },
+      "seed": 7414924
+    },
+    "root.1": {
+      "size": 0.3,
+      "segments": 1,
+      "split": {
+        "number": 1,
+        "numberVariance": 0,
+        "angle": {
+          "start": 0,
+          "step": 0,
+          "variance": 0
+        }
+      },
+      "width": 0.01,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      }
+    },
+    "root.2": {
+      "size": 0.1,
+      "segments": 1,
+      "split": {
+        "number": 2,
+        "numberVariance": 0,
+        "angle": {
+          "start": -0.15,
+          "step": 0.3,
+          "variance": 0.1
+        }
+      },
+      "width": 0.005,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
+      }
+    },
+    "root.2.3": {
+      "size": 0.1,
+      "segments": 2,
+      "split": {
+        "number": 1,
+        "numberVariance": 0,
+        "angle": {
+          "start": -0.2,
+          "step": 0.4,
+          "variance": 0.1,
+          "toward": 0.01
+        }
+      },
+      "width": 0.005,
+      "corrugation": {
+        "amplitude": 0,
+        "number": 2
       }
     }
   },

@@ -18,82 +18,86 @@
   </div>
   <br>
   <!-- controls -->
-  <div id='app'>
-    <div style='float:left; padding-right:2em'>
-      <h2>gardens</h2>
-      <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails()'><br>
-      <h3>create</h3>
-      <input type='text' v-model='gardenCreateName' placeholder='name'><br>
-      <input type='button' value='create' @click='gardenCreate()'>
-      <h2>visual</h2>
-      <h3>mode</h3>
-      <input type='radio' id='select' value='select' v-model='visualMode'><label for='select'>select</label><br>
-      <input type='radio' id='create' value='create' v-model='visualMode'><label for='create'>create</label><br>
-      <h3>subject</h3>
-      <input type='radio' id='reference' value='reference' v-model='visualSubject'><label for='reference'>reference</label><br>
-      <input type='radio' id='context'   value='context'   v-model='visualSubject'><label for='context'  >context  </label><br>
-      <input type='radio' id='plant'     value='plant'     v-model='visualSubject'><label for='plant'    >plant    </label><br>
-      <h2>edit</h2>
-      <input type='button' value='delete' @click='editDel()'>
-    </div>
-    <div style='float:left; padding-right:2em'>
-      <h2>references</h2>
-      <table v-if='references.length'>
-        <tr>
-          <th></th>
-          <th>1</th>
-          <th>2</th>
-        </tr>
-        <tr v-for='reference in references'>
-          <td>v{ reference.name }v (v{ reference.x }v, v{ reference.y }v)</td>
-          <td><input type='radio' :value='reference.id' v-model='reference1'></td>
-          <td><input type='radio' :value='reference.id' v-model='reference2'></td>
-        </tr>
-      </table>
-      <h3>prefer</h3>
-      <input type='radio' id='n' value='n' v-model='referencePrefer'><label for='n'>north</label>
-      <input type='radio' id='e' value='e' v-model='referencePrefer'><label for='e'>east </label><br>
-      <input type='radio' id='s' value='s' v-model='referencePrefer'><label for='s'>south</label>
-      <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
-      <h3>create</h3>
-      <input type='text' v-model='referenceCreateName' placeholder='name'><br>
-      <input type='number' v-model.number='referenceCreateX'>x<br>
-      <input type='number' v-model.number='referenceCreateY'>y<br>
-      <input type='button' value='create' @click='referenceCreate()'>
-      <h2>location</h2>
-      <input type='number' v-model.number='locationD1' placeholder='distance from reference 1'>R1<br>
-      <input type='number' v-model.number='locationD2' placeholder='distance from reference 2'>R2<br>
-    </div>
-    <div style='float:left; padding-right:2em'>
-      <h2>plants</h2>
-      <input type='text' v-model='plantObserveName' placeholder='name'><br>
-      <input type='number' v-model.number='plantObserveX'>x<br>
-      <input type='number' v-model.number='plantObserveY'>y<br>
-      <input type='button' value='observe' @click='plantObserve()'>
-      <h3>icon</h3>
-      <select v-model='plantObserveIconParamsSelection'>
-        <option v-for='v, k in plantObserveIconParamsOptions'>
-          v{ k }v
-        </option>
-      </select><input type='button' value='apply' @click='iconParamsSelected'><br>
-      <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
-      <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
-      <div v-for='v, k in plantObserveIconParams'>
-        <h4>v{ k }v</h4>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.size'>size<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.segments'>segments<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.split.number'>split-number<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.split.numberVariance'>split-number-variance<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.start'>split-angle-start<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.step'>split-angle-step<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.variance'>split-angle-variance<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.width'>width<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.corrugation.amplitude'>corrugation-amplitude<br>
-        <input type='number' @change='iconParamsChanged' v-model.number='v.corrugation.number'>corrugation-number<br>
-        <input type='button' value='add child' @click='iconParamsAddChild(k)'>
-        <input type='button' value='remove' @click='iconParamsRemoveChild(k)' v-if='k!="root"'>
+  <div style='overflow-y: scroll; height: 600px'>
+    <div id='app'>
+      <div style='float:left; padding-right:2em'>
+        <h2>gardens</h2>
+        <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails()'><br>
+        <h3>create</h3>
+        <input type='text' v-model='gardenCreateName' placeholder='name'><br>
+        <input type='button' value='create' @click='gardenCreate()'>
+        <h2>visual</h2>
+        <h3>mode</h3>
+        <input type='radio' id='select' value='select' v-model='visualMode'><label for='select'>select</label><br>
+        <input type='radio' id='create' value='create' v-model='visualMode'><label for='create'>create</label><br>
+        <h3>subject</h3>
+        <input type='radio' id='reference' value='reference' v-model='visualSubject'><label for='reference'>reference</label><br>
+        <input type='radio' id='context'   value='context'   v-model='visualSubject'><label for='context'  >context  </label><br>
+        <input type='radio' id='plant'     value='plant'     v-model='visualSubject'><label for='plant'    >plant    </label><br>
+        <h2>edit</h2>
+        <input type='button' value='delete' @click='editDel()'>
+      </div>
+      <div style='float:left; padding-right:2em'>
+        <h2>references</h2>
+        <table v-if='references.length'>
+          <tr>
+            <th></th>
+            <th>1</th>
+            <th>2</th>
+          </tr>
+          <tr v-for='reference in references'>
+            <td>v{ reference.name }v (v{ reference.x }v, v{ reference.y }v)</td>
+            <td><input type='radio' :value='reference.id' v-model='reference1'></td>
+            <td><input type='radio' :value='reference.id' v-model='reference2'></td>
+          </tr>
+        </table>
+        <h3>prefer</h3>
+        <input type='radio' id='n' value='n' v-model='referencePrefer'><label for='n'>north</label>
+        <input type='radio' id='e' value='e' v-model='referencePrefer'><label for='e'>east </label><br>
+        <input type='radio' id='s' value='s' v-model='referencePrefer'><label for='s'>south</label>
+        <input type='radio' id='w' value='w' v-model='referencePrefer'><label for='w'>west </label><br>
+        <h3>create</h3>
+        <input type='text' v-model='referenceCreateName' placeholder='name'><br>
+        <input type='number' v-model.number='referenceCreateX'>x<br>
+        <input type='number' v-model.number='referenceCreateY'>y<br>
+        <input type='button' value='create' @click='referenceCreate()'>
+        <h2>location</h2>
+        <input type='number' v-model.number='locationD1' placeholder='distance from reference 1'>R1<br>
+        <input type='number' v-model.number='locationD2' placeholder='distance from reference 2'>R2<br>
+      </div>
+      <div style='float:left; padding-right:2em'>
+        <h2>plants</h2>
+        <input type='text' v-model='plantObserveName' placeholder='name'><br>
+        <input type='number' v-model.number='plantObserveX'>x<br>
+        <input type='number' v-model.number='plantObserveY'>y<br>
+        <input type='button' value='observe' @click='plantObserve()'>
+        <h3>icon</h3>
+        <select v-model='plantObserveIconParamsSelection'>
+          <option v-for='v, k in plantObserveIconParamsOptions'>
+            v{ k }v
+          </option>
+        </select><input type='button' value='apply' @click='iconParamsSelected'><br>
+        <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
+        <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
+        <div v-for='v, k in plantObserveIconParams'>
+          <h4>v{ k }v</h4>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.size'>size<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.segments'>segments<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.split.number'>split-number<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.split.numberVariance'>split-number-variance<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.start'>split-angle-start<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.step'>split-angle-step<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.variance'>split-angle-variance<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.split.angle.toward'>split-angle-toward<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.width'>width<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.corrugation.amplitude'>corrugation-amplitude<br>
+          <input type='number' @change='iconParamsChanged' v-model.number='v.corrugation.number'>corrugation-number<br>
+          <input type='button' value='add child' @click='iconParamsAddChild(k)'>
+          <input type='button' value='remove' @click='iconParamsRemoveChild(k)' v-if='k!="root"'>
+        </div>
       </div>
     </div>
+    <div style='height: 400px; clear: left'></div>
   </div>
   {% csrf_token %}
   <!-- script -->
