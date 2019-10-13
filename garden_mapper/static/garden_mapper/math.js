@@ -1,13 +1,17 @@
+const e30 = 1 << 30;
+
 export class Rand {
   constructor(seed) {
     this.state = seed;
   }
   next(min = 0, max = 1) {
+    return (this.nextI() / (4 * e30) * (max - min)) + min;
+  }
+  nextI() {
     this.state ^= this.state << 13;
     this.state ^= this.state >> 17;
     this.state ^= this.state << 5;
-    const e30 = 1 << 30;
-    return ((this.state + 2 * e30) / (4 * e30) * (max - min)) + min;
+    return this.state + 2 * e30;
   }
 }
 
