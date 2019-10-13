@@ -39,7 +39,9 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
     + params.split.angle.start
     + split * params.split.angle.step
   );
-  const angleV = angleF + 2 * Math.PI * params.split.angle.variance * rand.next(-1, 1);
+  var r = rand.next(-1, 1);
+  if (params.split.angle.toward && (sign > 0) == (r < 0)) r *= -1;
+  const angleV = angleF + 2 * Math.PI * params.split.angle.variance * r;
   const sizeF = size + (params.sizeStep || 0);
   const sizeV = sizeF + (params.sizeVariance || 0) * rand.next();
   const xf = x + sizeV * Math.sin(angleV);
@@ -70,7 +72,7 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
   }
   context.stroke();
   context.fill();
-  return { x: xf, y: yf, angle: angleF, size: sizeF };
+  return { x: xf, y: yf, angle: angleV, size: sizeF };
 }
 
 export function renderIcon(self, x, y, params) {
@@ -145,11 +147,15 @@ export function iconParamsNest(params) {
 }
 
 export const iconParams = {
+  artichoke: {"root":{"size":0.01,"segments":1,"split":{"number":5,"angle":{"start":0,"step":0,"variance":0.25},"numberVariance":0},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":11009849,"sizeVariance":0.005},"root.1":{"size":0.5,"sizeStep":0,"sizeVariance":0.2,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.05,"toward":0}},"width":0.2,"corrugation":{"amplitude":0.5,"number":10}}},
   asparagus: {"root":{"size":0.05,"segments":5,"split":{"number":1,"angle":{"start":0,"step":0,"variance":0.05},"numberVariance":0},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":972349},"root.1":{"size":0.05,"segments":1,"split":{"number":3,"numberVariance":0,"angle":{"start":-0.25,"step":0.25,"variance":0.1}},"width":0,"corrugation":{"amplitude":0,"number":2}}},
   blueberry: {"root":{"size":0.1,"segments":3,"split":{"number":1,"angle":{"start":-0.05,"step":0.1,"variance":0.05},"numberVariance":2},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":704705},"root.1":{"size":0.04,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.2}},"width":0.03,"corrugation":{"amplitude":0.1,"number":2}}},
   cauliflower: {"root":{"size":0,"segments":1,"split":{"number":1,"angle":{"start":0,"step":0,"variance":0}},"width":0,"corrugation":{"amplitude":0,"number":0},"seed":15097425},"root.1":{"size":0.03,"segments":3,"split":{"number":3,"angle":{"start":-0.2,"step":0.4,"variance":0.1}},"width":0.03,"corrugation":{"amplitude":0.1,"number":10}},"root.2":{"size":0.3,"segments":1,"split":{"number":12,"angle":{"start":0,"step":0.2,"variance":0.1}},"width":0.1,"corrugation":{"amplitude":0.3,"number":1}}},
   corn: {"root":{"size":0.2,"segments":4,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.01}},"width":0.005,"corrugation":{"amplitude":0,"number":2},"seed":749801},"root.1":{"size":0.3,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0}},"width":0.01,"corrugation":{"amplitude":0,"number":2}},"root.2":{"size":0.1,"segments":1,"split":{"number":2,"numberVariance":0,"angle":{"start":-0.15,"step":0.3,"variance":0.1}},"width":0.005,"corrugation":{"amplitude":0,"number":2}},"root.2.3":{"size":0.1,"segments":2,"split":{"number":1,"numberVariance":0,"angle":{"start":-0.2,"step":0.4,"variance":0.1,"toward":0.01}},"width":0.005,"corrugation":{"amplitude":0,"number":2}}},
+  cucumber: {"root":{"size":0.2,"segments":5,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.1}},"width":0.005,"corrugation":{"amplitude":0,"number":0},"seed":3967192,"sizeVariance":0.05},"root.1":{"size":0.1,"sizeStep":0,"sizeVariance":0,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.2,"toward":0}},"width":0.003,"corrugation":{"amplitude":0,"number":2}},"root.1.2":{"size":0.1,"sizeStep":0,"sizeVariance":0,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0,"toward":0}},"width":0.1,"corrugation":{"amplitude":0.05,"number":6}}},
+  garlic: {"root":{"size":0.01,"segments":2,"split":{"number":1,"angle":{"start":0,"step":0,"variance":0.1,"toward":0.001},"numberVariance":1},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":110817,"sizeVariance":0.005},"root.1":{"size":0.01,"sizeStep":0,"sizeVariance":0.2,"segments":3,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.05,"toward":0.001}},"width":0.005,"corrugation":{"amplitude":0,"number":2}}},
   raspberry: {"root":{"size":0,"segments":1,"split":{"number":5,"numberVariance":0,"angle":{"start":0,"step":0.2,"variance":0}},"width":0,"corrugation":{"amplitude":0,"number":0},"seed":10839999},"root.1":{"size":0.05,"segments":4,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.1,"toward":0}},"width":0,"corrugation":{"amplitude":0,"number":2}},"root.1.2":{"size":0.05,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.25,"toward":0}},"width":0.05,"corrugation":{"amplitude":0.1,"number":5}}},
+  rhubarb: {"root":{"size":0.2,"segments":1,"split":{"number":7,"angle":{"start":0,"step":0.14,"variance":0.07}},"width":0.02,"corrugation":{"amplitude":0,"number":0},"seed":4362961,"sizeVariance":0.1},"root.1":{"size":0.2,"sizeStep":0,"sizeVariance":0,"segments":1,"split":{"number":1,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0,"toward":0}},"width":0.2,"corrugation":{"amplitude":0.07,"number":10}}},
   sage: {"root":{"size":0.05,"segments":3,"split":{"number":1,"angle":{"start":0,"step":0,"variance":0.1},"numberVariance":1},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":9353382,"sizeVariance":0.1},"root.1":{"size":0.07,"segments":1,"split":{"number":3,"numberVariance":0,"angle":{"start":0,"step":0,"variance":0.1}},"width":0.03,"corrugation":{"amplitude":0.1,"number":2},"sizeVariance":0.05}},
   strawberry: {"root":{"size":0.1,"segments":1,"split":{"number":5,"angle":{"start":0,"step":0.2,"variance":0.05}},"width":0,"corrugation":{"amplitude":0,"number":2},"seed":15857556},"root.1":{"size":0.05,"segments":1,"split":{"number":3,"angle":{"start":-0.25,"step":0.25,"variance":0.05}},"width":0.05,"corrugation":{"amplitude":0.1,"number":10}}},
 };
