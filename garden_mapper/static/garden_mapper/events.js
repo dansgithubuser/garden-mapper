@@ -30,7 +30,7 @@ export function onTap(self, id, x, y) {
         const potentials = [];
         for (const i of array) {
           const location = self.math.transformToPixels(self, i);
-          if (self.math.distance(location.px, location.py, x, y) < 10)
+          if (self.math.distance(location.px, location.py, x, y) < 20)
             potentials.push(i);
         }
         return self.obvious.randomElement(potentials);
