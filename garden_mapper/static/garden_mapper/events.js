@@ -76,17 +76,23 @@ export function onTap(self, id, x, y) {
       self.selected = near;
       break;
     case 'create':
+      function mark() {
+        self.markers.push(world);
+        self.render();
+      }
       switch (self.visualSubject) {
         case 'reference':
           if (!self.referenceCreateName) return;
           self.referenceCreateX = round.x;
           self.referenceCreateY = round.y;
+          mark();
           self.referenceCreate();
           break;
         case 'context':
           if (!self.contextI) {
             self.contextI = round;
           } else {
+            mark();
             self.post('/context_create', {
               garden: self.gardenId,
               instructions: JSON.stringify({
@@ -101,6 +107,7 @@ export function onTap(self, id, x, y) {
           if (!self.plantObserveName) return;
           self.plantObserveX = round.x;
           self.plantObserveY = round.y;
+          mark();
           self.plantObserve();
           break;
       }
