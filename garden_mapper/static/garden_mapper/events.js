@@ -87,7 +87,7 @@ export function onTap(self, id, x, y) {
                 op: 'lines',
                 points: [self.contextI, round],
               }),
-            }).then(self.gardenDetails);
+            }).then(() => self.gardenDetails());
             self.contextI = null;
           }
           break;

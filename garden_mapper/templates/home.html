@@ -22,7 +22,7 @@
     <div id='app'>
       <div style='float:left; padding-right:2em'>
         <h2>gardens</h2>
-        <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails()'><br>
+        <input v-for='garden in gardens' type='button' :value='garden.name' @click='gardenId = garden.id; gardenDetails(true)'><br>
         <h3>create</h3>
         <input type='text' v-model='gardenCreateName' placeholder='name'><br>
         <input type='button' value='create' @click='gardenCreate()'>
@@ -284,7 +284,7 @@ var app = new Vue({
     gardenCreate() {
       this.post('/garden_create', { name: this.gardenCreateName }).then(this.gardenList);
     },
-    async gardenDetails() {
+    async gardenDetails(center = false) {
       const { references, context, plants } = await fetch(`/garden_details?id=${this.gardenId}`).then(r => r.json());
       this.references = references;
       this.context = context;
@@ -293,7 +293,7 @@ var app = new Vue({
         this.post('/plant_delete', { id: i.id });
         return false;
       });
-      if (references.length || plants.length) {
+      if (center && (references.length || plants.length)) {
         // get extent of garden
         var entities = references;
         for (const plant of plants) entities = entities.concat(plant.observations);
@@ -329,7 +329,7 @@ var app = new Vue({
           this.selected = null;
           break;
       }
-      this.post(url, { id }).then(this.gardenDetails);
+      this.post(url, { id }).then(() => this.gardenDetails());
     },
     referenceCreate() {
       this.post('/reference_create', {
@@ -337,7 +337,7 @@ var app = new Vue({
         name: this.referenceCreateName,
         x: this.referenceCreateX,
         y: this.referenceCreateY,
-      }).then(this.gardenDetails);
+      }).then(() => this.gardenDetails());
     },
     async plantObserve() {
       // gather observation from user
