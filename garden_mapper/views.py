@@ -104,7 +104,7 @@ def garden_details(request):
     references = models.Reference.objects.filter(garden_id=garden_id)
     context = models.Context.objects.filter(garden_id=garden_id)
     plants = models.Plant.objects.filter(garden_id=garden_id)
-    observations = models.Observation.objects.filter(plant__garden_id=garden_id)
+    observations = models.Observation.objects.filter(plant__garden_id=garden_id).order_by('created_at')
     result = {
         'references': [i for i in references.values()],
         'context': [
