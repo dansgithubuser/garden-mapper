@@ -249,7 +249,7 @@ var app = new Vue({
       if (!this.gardenId) return;
       events.onDrag(this, touches, dx, dy, dSize, dTheta, extra);
     },
-    onTap(id, x, y) {
+    onTap(id, x, y, extra) {
       if (!this.gardenId) return;
       events.onTap(this, id, x, y);
     },
@@ -390,7 +390,9 @@ var app = new Vue({
     },
   },
   mounted() {
-    this.gardenList();
+    {% if user.is_authenticated %}
+      this.gardenList();
+    {% endif %}
   },
 });
 
