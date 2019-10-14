@@ -4,10 +4,16 @@ export function onWheel(self, x, y, dWheel) {
   self.render();
 }
 
-export function onDrag(self, touches, dx, dy, dSize, dTheta) {
-  if (touches.length == 1) {
-    self.x -= dx / self.zoom;
-    self.y += dy / self.zoom;
+export function onDrag(self, touches, dx, dy, dSize, dTheta, { sizeI }) {
+  switch (touches.length) {
+    case 1:
+      self.x -= dx / self.zoom;
+      self.y += dy / self.zoom;
+      break;
+    case 2:
+      if (!sizeI) break;
+      self.zoom *= (sizeI + dSize) / sizeI;
+      break;
   }
   self.render();
 }
