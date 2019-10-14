@@ -21,6 +21,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'bnr9ceur0=0#!8=owst$_g-ag7yemnd-b6=ak=w7_3l6j5nx=v'
+if os.environ.get('DJANGOGO_ENV') != 'local':
+    SECRET_KEY = os.environ['GARDEN_MAPPER_SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
