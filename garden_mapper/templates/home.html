@@ -240,12 +240,15 @@ var app = new Vue({
       }
     },
     onWheel(x, y, dWheel) {
+      if (!this.gardenId) return;
       events.onWheel(this, x, y, dWheel);
     },
     onDrag(touches, dx, dy, dSize, dTheta) {
+      if (!this.gardenId) return;
       events.onDrag(this, touches, dx, dy, dSize, dTheta);
     },
     onTap(id, x, y) {
+      if (!this.gardenId) return;
       events.onTap(this, id, x, y);
     },
     // icon params
