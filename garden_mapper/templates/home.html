@@ -239,8 +239,14 @@ var app = new Vue({
         icon.renderIcon(this, x, y, icon_params);
       }
     },
-    onEnd(id, x, y) {
-      events.onEnd(this, id, x, y);
+    onWheel(x, y, dWheel) {
+      events.onWheel(this, x, y, dWheel);
+    },
+    onDrag(touches, dx, dy, dSize, dTheta) {
+      events.onDrag(this, touches, dx, dy, dSize, dTheta);
+    },
+    onTap(id, x, y) {
+      events.onTap(this, id, x, y);
     },
     // icon params
     iconParamsAddChild(parent) {
@@ -384,7 +390,9 @@ var app = new Vue({
 });
 
 obvious.listenToTouches(CANVAS, {
-  onEnd: app.onEnd,
+  onWheel: app.onWheel,
+  onDrag: app.onDrag,
+  onTap: app.onTap,
 });
 
 CONTEXT.fillStyle = 'white';

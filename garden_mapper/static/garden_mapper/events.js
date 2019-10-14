@@ -1,4 +1,18 @@
-export function onEnd(self, id, x, y) {
+export function onWheel(self, x, y, dWheel) {
+  const factor = 1.1;
+  self.zoom *= (dWheel < 0) ? factor : 1 / factor;
+  self.render();
+}
+
+export function onDrag(self, touches, dx, dy, dSize, dTheta) {
+  if (touches.length == 1) {
+    self.x -= dx / self.zoom;
+    self.y += dy / self.zoom;
+  }
+  self.render();
+}
+
+export function onTap(self, id, x, y) {
   const world = self.math.transformToWorld(self, { x, y });
   const round = {
     x: Math.round(world.x * 1000) / 1000,
