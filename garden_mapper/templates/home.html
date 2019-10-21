@@ -116,10 +116,11 @@ import * as math from '{% static 'garden_mapper/math.js' %}'
 import { wslog } from '{% static 'garden_mapper/wslog.js' %}'
 
 import * as obvious from '{% static 'obvious.js' %}'
+import { WebGLContext } from '{% static 'webgl-canvas.js' %}'
 
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
 const CANVAS = document.getElementById('canvas');
-const CONTEXT = CANVAS.getContext('2d');
+const CONTEXT = new WebGLContext(CANVAS);
 
 var app = new Vue({
   el: '#app',
@@ -158,7 +159,8 @@ var app = new Vue({
     math,
     wslog,
     obvious,
-    canvas: CANVAS,
+    CANVAS,
+    CONTEXT,
   }),
   methods: {
     post(url, body) {
