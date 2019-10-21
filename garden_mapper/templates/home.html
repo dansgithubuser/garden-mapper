@@ -120,7 +120,7 @@ import { WebGLContext } from '{% static 'webgl-canvas.js' %}'
 
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
 const CANVAS = document.getElementById('canvas');
-const CONTEXT = new WebGLContext(CANVAS);
+const CONTEXT = new WebGLContext(CANVAS, 'retained');
 
 var app = new Vue({
   el: '#app',
@@ -199,6 +199,7 @@ var app = new Vue({
       this.plantObserveY = result.y;
     },
     render() {
+      CONTEXT.clear();
       const selectionPrep = (subject, i) => {
         const isSelected = this.visualSubject == subject && this.selected && this.selected.id == i.id;
         CONTEXT.strokeStyle = isSelected ? 'skyblue' : 'black';
@@ -210,22 +211,22 @@ var app = new Vue({
       CONTEXT.strokeStyle = 'lightgrey';
       CONTEXT.beginPath();
       for (let x = Math.floor(this.extents.xi); x <= Math.ceil(this.extents.xf); ++x) {
-        const { px } = math.transformToPixels(this, { x });
+        const { px } = math.transformToPixels(this, { x }, false);
         CONTEXT.moveTo(px, 0);
         CONTEXT.lineTo(px, CANVAS.height);
       }
       for (let y = Math.floor(this.extents.yi); y <= Math.ceil(this.extents.yf); ++y) {
-        const { py } = math.transformToPixels(this, { y });
+        const { py } = math.transformToPixels(this, { y }, false);
         CONTEXT.moveTo(0, py);
         CONTEXT.lineTo(CANVAS.width, py);
       }
       CONTEXT.stroke();
       // references
       for (const i of this.references) {
-        const { px, py } = math.transformToPixels(this, i);
+        const { px, py } = math.transformToPixels(this, i, false);
         selectionPrep('reference', i);
         CONTEXT.beginPath();
-        CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
+        CONTEXT.arc(px, py, .02, 0, 2 * Math.PI);
         CONTEXT.stroke();
       }
       // context
@@ -236,7 +237,7 @@ var app = new Vue({
             CONTEXT.beginPath();
             var f = CONTEXT.moveTo.bind(CONTEXT);
             for (const j of i.instructions.points){
-              const p = math.transformToPixels(this, j);
+              const p = math.transformToPixels(this, j, false);
               f(p.x, p.y);
               f = CONTEXT.lineTo.bind(CONTEXT);
             }
@@ -250,20 +251,24 @@ var app = new Vue({
         var { x, y, icon_params } = this.plantObservation(i);
         if (isSelected)
           icon_params = icon.iconParamsNest(this.plantObserveIconParams);
-        const { px, py } = math.transformToPixels(this, {x, y});
+        const { px, py } = math.transformToPixels(this, {x, y}, false);
         CONTEXT.beginPath();
-        CONTEXT.arc(px, py, 4, 0, Math.PI);
+        CONTEXT.arc(px, py, .02, 0, Math.PI);
         CONTEXT.stroke();
         icon.renderIcon(this, x, y, icon_params);
       }
       // markers
       CONTEXT.strokeStyle = 'lawngreen';
       for (const i of this.markers) {
-        const { px, py } = math.transformToPixels(this, i);
+        const { px, py } = math.transformToPixels(this, i, false);
         CONTEXT.beginPath();
-        CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
+        CONTEXT.arc(px, py, .02, 0, 2 * Math.PI);
         CONTEXT.stroke();
       }
+      CONTEXT.display(this);
+    },
+    renderSmall() {
+      CONTEXT.display({ ...this, skipGeometry: true });
     },
     onWheel(x, y, dWheel) {
       if (!this.gardenId) return;

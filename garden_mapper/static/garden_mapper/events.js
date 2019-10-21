@@ -1,7 +1,7 @@
 export function onWheel(self, x, y, dWheel) {
   const factor = 1.1;
   self.zoom *= (dWheel < 0) ? factor : 1 / factor;
-  self.render();
+  self.renderSmall();
 }
 
 export function onDrag(self, touches, dx, dy, dSize, dTheta, { sizeI }) {
@@ -15,7 +15,7 @@ export function onDrag(self, touches, dx, dy, dSize, dTheta, { sizeI }) {
       self.zoom *= (sizeI + dSize) / sizeI;
       break;
   }
-  self.render();
+  self.renderSmall();
 }
 
 export function onTap(self, id, x, y) {

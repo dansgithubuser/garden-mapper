@@ -19,7 +19,11 @@ export function distance(xi, yi, xf, yf) {
   return Math.sqrt(Math.pow(xf - xi, 2) + Math.pow(yf - yi, 2));
 }
 
-export function transformToPixels({ x, y, zoom, CANVAS }, point) {
+export function transformToPixels({ x, y, zoom, CANVAS }, point, view = true) {
+  if (!view) {
+    x = y = 0;
+    zoom = 1;
+  }
   const s = {
     x:  (point.x - x) * zoom + CANVAS.width  / 2,
     y: -(point.y - y) * zoom + CANVAS.height / 2,

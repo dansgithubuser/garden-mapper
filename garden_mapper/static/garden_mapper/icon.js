@@ -55,7 +55,7 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
   self.CONTEXT.fillStyle = 'white';
   self.CONTEXT.beginPath();
   {
-    const { px, py } = self.math.transformToPixels(self, { x, y });
+    const { px, py } = self.math.transformToPixels(self, { x, y }, false);
     self.CONTEXT.moveTo(px, py);
   }
   for (let i = 0; i < divisions; ++i) {
@@ -66,7 +66,7 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
     const { px, py } = self.math.transformToPixels(self, {
       x: x + (p * (xf - x) + q * w.x) * s,
       y: y + (p * (yf - y) + q * w.y) * s,
-    });
+    }, false);
     self.CONTEXT.lineTo(px, py);
   }
   self.CONTEXT.fill();
