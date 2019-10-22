@@ -72,11 +72,11 @@
         <input type='number' v-model.number='plantObserveY'>y<br>
         <input type='button' value='observe' @click='plantObserve()'>
         <h3>icon</h3>
-        <select v-model='plantObserveIconParamsSelection'>
+        <select v-model='plantObserveIconParamsSelection' @change='iconParamsSelected'>
           <option v-for='v, k in plantObserveIconParamsOptions'>
             v{ k }v
           </option>
-        </select><input type='button' value='apply' @click='iconParamsSelected'><br>
+        </select><br>
         <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
         <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
         <div v-for='v, k in plantObserveIconParams'>
