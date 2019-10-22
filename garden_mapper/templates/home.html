@@ -205,6 +205,20 @@ var app = new Vue({
       };
       CONTEXT.fillStyle = 'white';
       CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
+      // grid
+      CONTEXT.strokeStyle = 'lightgrey';
+      CONTEXT.beginPath();
+      for (let x = Math.ceil(this.extents.xi); x <= Math.floor(this.extents.xf); ++x) {
+        const { px } = math.transformToPixels(this, { x });
+        CONTEXT.moveTo(px, 0);
+        CONTEXT.lineTo(px, CANVAS.height);
+      }
+      for (let y = Math.ceil(this.extents.yi); y <= Math.floor(this.extents.yf); ++y) {
+        const { py } = math.transformToPixels(this, { y });
+        CONTEXT.moveTo(0, py);
+        CONTEXT.lineTo(CANVAS.width, py);
+      }
+      CONTEXT.stroke();
       // references
       for (const i of this.references) {
         const { px, py } = math.transformToPixels(this, i);
@@ -319,6 +333,7 @@ var app = new Vue({
           if (xf == undefined || i.x > xf) xf = i.x;
           if (yf == undefined || i.y > yf) yf = i.y;
         }
+        this.extents = { xi, yi, xf, yf };
         // center and zoom
         this.x = (xi + xf) / 2;
         this.y = (yi + yf) / 2;
