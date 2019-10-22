@@ -77,7 +77,7 @@
             v{ k }v
           </option>
         </select><br>
-        <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
+        <input type='button' value='copy' @click='iconParamsCopy'><input type='button' value='paste' @click='iconParamsPaste'><br>
         <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
         <div v-for='v, k in plantObserveIconParams'>
           <h4>v{ k }v</h4>
@@ -145,7 +145,6 @@ var app = new Vue({
     plantObserveY: '',
     plantObserveIconParamsSelection: '',
     plantObserveIconParamsOptions: icon.iconParams,
-    plantObserveIconParamsCopyFrom: '',
     plantObserveIconParams: { root: icon.constructIconParams(true) },
     plants: [],
     // view state
@@ -296,12 +295,10 @@ var app = new Vue({
       this.iconParamsChanged();
     },
     iconParamsCopy() {
-      for (const i of this.plants)
-        if (i.name == this.plantObserveIconParamsCopyFrom) {
-          const observation = this.plantObservation(i);
-          this.plantObserveIconParams = icon.iconParamsFlatten(observation.icon_params);
-          break;
-        }
+      this.copiedIconParams = icon.iconParamsFlatten(this.selected.icon_params);
+    },
+    iconParamsPaste() {
+      this.plantObserveIconParams = this.copiedIconParams;
       this.randomizeSeed();
       this.iconParamsChanged();
     },
