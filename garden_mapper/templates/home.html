@@ -292,6 +292,7 @@ var app = new Vue({
       if (this.plantObserveIconParamsSelection == '') return;
       this.plantObserveIconParams = icon.iconParams[this.plantObserveIconParamsSelection];
       this.randomizeSeed();
+      this.plantObserveName = this.plantObserveIconParamsSelection;
       this.iconParamsChanged();
     },
     iconParamsCopy() {
