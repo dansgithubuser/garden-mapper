@@ -292,7 +292,7 @@ var app = new Vue({
     iconParamsSelected() {
       if (this.plantObserveIconParamsSelection == '') return;
       this.plantObserveIconParams = icon.iconParams[this.plantObserveIconParamsSelection];
-      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
+      this.randomizeSeed();
       this.iconParamsChanged();
     },
     iconParamsCopy() {
@@ -302,8 +302,11 @@ var app = new Vue({
           this.plantObserveIconParams = icon.iconParamsFlatten(observation.icon_params);
           break;
         }
-      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
+      this.randomizeSeed();
       this.iconParamsChanged();
+    },
+    randomizeSeed() {
+      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
     },
     // API
     async gardenList() {
