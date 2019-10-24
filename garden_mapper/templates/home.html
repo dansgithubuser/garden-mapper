@@ -207,12 +207,12 @@ var app = new Vue({
       // grid
       CONTEXT.strokeStyle = 'lightgrey';
       CONTEXT.beginPath();
-      for (let x = Math.ceil(this.extents.xi); x <= Math.floor(this.extents.xf); ++x) {
+      for (let x = Math.floor(this.extents.xi); x <= Math.ceil(this.extents.xf); ++x) {
         const { px } = math.transformToPixels(this, { x });
         CONTEXT.moveTo(px, 0);
         CONTEXT.lineTo(px, CANVAS.height);
       }
-      for (let y = Math.ceil(this.extents.yi); y <= Math.floor(this.extents.yf); ++y) {
+      for (let y = Math.floor(this.extents.yi); y <= Math.ceil(this.extents.yf); ++y) {
         const { py } = math.transformToPixels(this, { y });
         CONTEXT.moveTo(0, py);
         CONTEXT.lineTo(CANVAS.width, py);
