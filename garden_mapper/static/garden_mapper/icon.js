@@ -59,7 +59,7 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
     const { px, py } = self.math.transformToPixels(self, { x, y });
     context.moveTo(px, py);
   }
-  for (var i = 0; i < divisions; ++i) {
+  for (let i = 0; i < divisions; ++i) {
     const theta = (i / (divisions - 1)) * 2 * Math.PI;
     const p = (1 - Math.cos(theta)) / 2;
     const q = (    Math.sin(theta)) / 2;
@@ -89,7 +89,7 @@ export function renderIcon(self, x, y, params) {
     const segment = work.pop();
     var splits = segment.params.split.number;
     splits += rand.nextI() % ((segment.params.split.numberVariance || 0) + 1);
-    for (var split = 0; split < splits; ++split) {
+    for (let split = 0; split < splits; ++split) {
       const {
         x, y,
         angle,

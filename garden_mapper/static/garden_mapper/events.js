@@ -109,6 +109,7 @@ export function onTap(self, id, x, y) {
           self.plantObserveY = round.y;
           mark();
           self.plantObserve();
+          self.randomizeSeed();
           break;
       }
   }// switch (self.visualMode)

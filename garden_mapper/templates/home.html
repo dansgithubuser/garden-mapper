@@ -72,12 +72,12 @@
         <input type='number' v-model.number='plantObserveY'>y<br>
         <input type='button' value='observe' @click='plantObserve()'>
         <h3>icon</h3>
-        <select v-model='plantObserveIconParamsSelection'>
+        <select v-model='plantObserveIconParamsSelection' @change='iconParamsSelected'>
           <option v-for='v, k in plantObserveIconParamsOptions'>
             v{ k }v
           </option>
-        </select><input type='button' value='apply' @click='iconParamsSelected'><br>
-        <input type='text' v-model='plantObserveIconParamsCopyFrom' placeholder='plant name'><input type='button' value='copy' @click='iconParamsCopy'><br>
+        </select><br>
+        <input type='button' value='copy' @click='iconParamsCopy'><input type='button' value='paste' @click='iconParamsPaste'><br>
         <input type='number' v-model.number='plantObserveIconParams.root.seed' @change='iconParamsChanged'>seed<br>
         <div v-for='v, k in plantObserveIconParams'>
           <h4>v{ k }v</h4>
@@ -131,7 +131,7 @@ var app = new Vue({
     gardenId: null,
     visualMode: 'select',
     visualSubject: 'plant',
-    referenceCreateName: '',
+    referenceCreateName: 'R',
     referenceCreateX: '',
     referenceCreateY: '',
     references: [],
@@ -140,12 +140,11 @@ var app = new Vue({
     referencePrefer: 'n',
     locationD1: '',
     locationD2: '',
-    plantObserveName: '',
+    plantObserveName: 'plant',
     plantObserveX: '',
     plantObserveY: '',
     plantObserveIconParamsSelection: '',
     plantObserveIconParamsOptions: icon.iconParams,
-    plantObserveIconParamsCopyFrom: '',
     plantObserveIconParams: { root: icon.constructIconParams(true) },
     plants: [],
     // view state
@@ -205,6 +204,20 @@ var app = new Vue({
       };
       CONTEXT.fillStyle = 'white';
       CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
+      // grid
+      CONTEXT.strokeStyle = 'lightgrey';
+      CONTEXT.beginPath();
+      for (let x = Math.floor(this.extents.xi); x <= Math.ceil(this.extents.xf); ++x) {
+        const { px } = math.transformToPixels(this, { x });
+        CONTEXT.moveTo(px, 0);
+        CONTEXT.lineTo(px, CANVAS.height);
+      }
+      for (let y = Math.floor(this.extents.yi); y <= Math.ceil(this.extents.yf); ++y) {
+        const { py } = math.transformToPixels(this, { y });
+        CONTEXT.moveTo(0, py);
+        CONTEXT.lineTo(CANVAS.width, py);
+      }
+      CONTEXT.stroke();
       // references
       for (const i of this.references) {
         const { px, py } = math.transformToPixels(this, i);
@@ -278,18 +291,20 @@ var app = new Vue({
     iconParamsSelected() {
       if (this.plantObserveIconParamsSelection == '') return;
       this.plantObserveIconParams = icon.iconParams[this.plantObserveIconParamsSelection];
-      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
+      this.randomizeSeed();
+      this.plantObserveName = this.plantObserveIconParamsSelection;
       this.iconParamsChanged();
     },
     iconParamsCopy() {
-      for (const i of this.plants)
-        if (i.name == this.plantObserveIconParamsCopyFrom) {
-          const observation = this.plantObservation(i);
-          this.plantObserveIconParams = icon.iconParamsFlatten(observation.icon_params);
-          break;
-        }
-      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
+      this.copiedIconParams = icon.iconParamsFlatten(this.selected.icon_params);
+    },
+    iconParamsPaste() {
+      this.plantObserveIconParams = this.copiedIconParams;
+      this.randomizeSeed();
       this.iconParamsChanged();
+    },
+    randomizeSeed() {
+      this.plantObserveIconParams.root.seed = Math.floor(Math.random() * (1 << 24));
     },
     // API
     async gardenList() {
@@ -319,6 +334,7 @@ var app = new Vue({
           if (xf == undefined || i.x > xf) xf = i.x;
           if (yf == undefined || i.y > yf) yf = i.y;
         }
+        this.extents = { xi, yi, xf, yf };
         // center and zoom
         this.x = (xi + xf) / 2;
         this.y = (yi + yf) / 2;
