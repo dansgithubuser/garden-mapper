@@ -153,7 +153,7 @@ var app = new Vue({
     y: 0,
     zoom: 1, // zoom = pixels / observation_units
     selected: null,
-    markers: [],
+    marker: { x: 0, y: 0 },
     // forwarding
     icon,
     math,
@@ -257,14 +257,17 @@ var app = new Vue({
         CONTEXT.stroke();
         icon.renderIcon(this, x, y, icon_params);
       }
-      // markers
-      CONTEXT.strokeStyle = 'lawngreen';
-      for (const i of this.markers) {
-        const { px, py } = math.transformToPixels(this, i, false);
+      // marker
+      {
+        CONTEXT.getShape();
+        CONTEXT.strokeStyle = 'rgba(0, 0, 0, 0)';
+        const { px, py } = math.transformToPixels(this, this.marker, false);
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, .02, 0, 2 * Math.PI);
         CONTEXT.stroke();
+        this.marker.shape = CONTEXT.getShape();
       }
+      // display
       CONTEXT.display(this);
     },
     renderSmall() {
@@ -329,7 +332,6 @@ var app = new Vue({
         this.post('/plant_delete', { id: i.id });
         return false;
       });
-      this.markers = [];
       if (center && (references.length || plants.length)) {
         // get extent of garden
         var entities = references;

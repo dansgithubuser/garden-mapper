@@ -77,8 +77,11 @@ export function onTap(self, id, x, y) {
       break;
     case 'create':
       function mark() {
-        self.markers.push(world);
-        self.render();
+        self.marker.shape.move(world.x - self.marker.x, world.y - self.marker.y);
+        self.marker.x = world.x;
+        self.marker.y = world.y;
+        self.marker.shape.recolor(0.5, 1, 0, 1, 'Stroke');
+        self.renderSmall();
       }
       switch (self.visualSubject) {
         case 'reference':
