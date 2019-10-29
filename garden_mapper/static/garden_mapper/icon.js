@@ -51,7 +51,7 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
     x: -(yf - y) / d * params.width,
     y:  (xf - x) / d * params.width,
   };
-  const divisions = Math.min(params.corrugation.number * 5 + 8, 40);
+  const divisions = params.width ? Math.min(params.corrugation.number * 5 + 8, 40) : 3;
   self.CONTEXT.fillStyle = 'white';
   self.CONTEXT.beginPath();
   {
