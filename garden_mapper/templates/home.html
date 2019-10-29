@@ -200,11 +200,6 @@ var app = new Vue({
     },
     render() {
       CONTEXT.clear();
-      const selectionPrep = (subject, i) => {
-        const isSelected = this.visualSubject == subject && this.selected && this.selected.id == i.id;
-        CONTEXT.strokeStyle = isSelected ? 'skyblue' : 'black';
-        return isSelected;
-      };
       CONTEXT.fillStyle = 'white';
       CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
       // grid
@@ -221,17 +216,18 @@ var app = new Vue({
         CONTEXT.lineTo(CANVAS.width, py);
       }
       CONTEXT.stroke();
+      CONTEXT.getShape();
+      CONTEXT.strokeStyle = 'black';
       // references
       for (const i of this.references) {
         const { px, py } = math.transformToPixels(this, i, false);
-        selectionPrep('reference', i);
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, .02, 0, 2 * Math.PI);
         CONTEXT.stroke();
+        i.shape = CONTEXT.getShape();
       }
       // context
       for (const i of this.context) {
-        selectionPrep('context', i);
         switch (i.instructions.op) {
           case 'lines':
             CONTEXT.beginPath();
@@ -244,22 +240,22 @@ var app = new Vue({
             CONTEXT.stroke();
             break;
         }
+        i.shape = CONTEXT.getShape();
       }
       // plants
       for (const i of this.plants) {
-        const isSelected = selectionPrep('plant', i);
         var { x, y, icon_params } = this.plantObservation(i);
-        if (isSelected)
+        if (this.visualSubject == 'plant' && this.selected && this.selected.id == i.id)
           icon_params = icon.iconParamsNest(this.plantObserveIconParams);
         const { px, py } = math.transformToPixels(this, {x, y}, false);
         CONTEXT.beginPath();
         CONTEXT.arc(px, py, .02, 0, Math.PI);
         CONTEXT.stroke();
         icon.renderIcon(this, x, y, icon_params);
+        i.shape = CONTEXT.getShape();
       }
       // marker
       {
-        CONTEXT.getShape();
         CONTEXT.strokeStyle = 'rgba(0, 0, 0, 0)';
         const { px, py } = math.transformToPixels(this, this.marker, false);
         CONTEXT.beginPath();
@@ -418,7 +414,8 @@ var app = new Vue({
       this.calculateXY();
     },
     selected() {
-      this.render();
+      if (this.selected) this.selected.shape.recolor(0.5, 0.75, 1, 1, 'Stroke');
+      this.renderSmall();
     },
     visualSubject() {
       this.render();

@@ -47,7 +47,7 @@ export function onTap(self, id, x, y) {
               switch (i.instructions.op) {
                 case 'lines':
                   for (const j of i.instructions.points)
-                    r.push({ x: j.x, y: j.y, id: i.id });
+                    r.push({ x: j.x, y: j.y, id: i.id, shape: i.shape });
                   return r;
               }
             }, []),
@@ -59,7 +59,7 @@ export function onTap(self, id, x, y) {
           near = getNear(
             self.plants.reduce((r, i) => {
               const { x, y, icon_params } = self.plantObservation(i);
-              r.push({ x, y, id: i.id, icon_params, plant: i });
+              r.push({ x, y, id: i.id, shape: i.shape, icon_params, plant: i });
               return r;
             }, []),
             x, y,
@@ -73,6 +73,7 @@ export function onTap(self, id, x, y) {
           break;
         }
       }
+      if (self.selected) self.selected.shape.recolor(0, 0, 0, 1, 'Stroke');
       self.selected = near;
       break;
     case 'create':
