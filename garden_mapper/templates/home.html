@@ -352,6 +352,7 @@ var app = new Vue({
     editDel() {
       var url;
       var id = this.selected.id;
+      this.selected.shape.recolor(0, 0, 0, 0, 'Stroke');
       switch (this.visualSubject) {
         case 'reference':
           url = '/reference_delete';
