@@ -1,9 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+import random
+import string
+
+def _gen_token():
+    return ''.join(
+        random.choice(string.ascii_letters + string.digits)
+        for i in range(32)
+    )
+
 class Garden(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.TextField()
+    token = models.TextField(db_index=True, default=_gen_token)
 
 class Reference(models.Model):
     garden = models.ForeignKey(Garden, on_delete=models.CASCADE)

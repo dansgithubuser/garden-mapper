@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.db.models.fields.related import ForeignKey
 from django.forms.models import model_to_dict
 from django.http import JsonResponse, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
 import inspect
@@ -94,18 +94,24 @@ def _crudify(name, model):
 
 for name, model in inspect.getmembers(models):
     if getattr(model, '__module__', None) != 'garden_mapper.models': continue
+    if not inspect.isclass(model): continue
     if not issubclass(model, models.models.Model): continue
     _crudify(name, model)
 
 def garden_details(request):
-    garden_id = request.GET['id']
-    garden = models.Garden.objects.get(id=garden_id)
-    if garden.user != request.user: return HttpResponse(status=404)
-    references = models.Reference.objects.filter(garden_id=garden_id)
-    context = models.Context.objects.filter(garden_id=garden_id)
-    plants = models.Plant.objects.filter(garden_id=garden_id)
-    observations = models.Observation.objects.filter(plant__garden_id=garden_id).order_by('created_at')
+    token = request.GET.get('token')
+    if token:
+        garden = get_object_or_404(models.Garden, token=token)
+    else:
+        garden = models.Garden.objects.get(id=request.GET['id'])
+        if garden.user != request.user: return HttpResponse(status=404)
+    references = models.Reference.objects.filter(garden_id=garden.id)
+    context = models.Context.objects.filter(garden_id=garden.id)
+    plants = models.Plant.objects.filter(garden_id=garden.id)
+    observations = models.Observation.objects.filter(plant__garden_id=garden.id).order_by('created_at')
     result = {
+        'id': garden.id,
+        'token': garden.token,
         'references': [i for i in references.values()],
         'context': [
             i.update(instructions=json.loads(i['instructions'])) or i
