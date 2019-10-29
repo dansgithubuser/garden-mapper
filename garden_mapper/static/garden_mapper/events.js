@@ -1,7 +1,7 @@
 export function onWheel(self, x, y, dWheel) {
   const factor = 1.1;
   self.zoom *= (dWheel < 0) ? factor : 1 / factor;
-  self.render();
+  self.renderSmall();
 }
 
 export function onDrag(self, touches, dx, dy, dSize, dTheta, { sizeI }) {
@@ -15,7 +15,7 @@ export function onDrag(self, touches, dx, dy, dSize, dTheta, { sizeI }) {
       self.zoom *= (sizeI + dSize) / sizeI;
       break;
   }
-  self.render();
+  self.renderSmall();
 }
 
 export function onTap(self, id, x, y) {
@@ -47,7 +47,7 @@ export function onTap(self, id, x, y) {
               switch (i.instructions.op) {
                 case 'lines':
                   for (const j of i.instructions.points)
-                    r.push({ x: j.x, y: j.y, id: i.id });
+                    r.push({ x: j.x, y: j.y, id: i.id, shape: i.shape });
                   return r;
               }
             }, []),
@@ -59,7 +59,7 @@ export function onTap(self, id, x, y) {
           near = getNear(
             self.plants.reduce((r, i) => {
               const { x, y, icon_params } = self.plantObservation(i);
-              r.push({ x, y, id: i.id, icon_params, plant: i });
+              r.push({ x, y, id: i.id, shape: i.shape, icon_params, plant: i });
               return r;
             }, []),
             x, y,
@@ -73,12 +73,16 @@ export function onTap(self, id, x, y) {
           break;
         }
       }
+      if (self.selected) self.selected.shape.recolor(0, 0, 0, 1, 'Stroke');
       self.selected = near;
       break;
     case 'create':
       function mark() {
-        self.markers.push(world);
-        self.render();
+        self.marker.shape.move(world.x - self.marker.x, world.y - self.marker.y);
+        self.marker.x = world.x;
+        self.marker.y = world.y;
+        self.marker.shape.recolor(0.5, 1, 0, 1, 'Stroke');
+        self.renderSmall();
       }
       switch (self.visualSubject) {
         case 'reference':

@@ -133,6 +133,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'deps', 'obvious'),
+    os.path.join(BASE_DIR, 'deps', 'webgl-canvas'),
 ]
 
 # from manage.py check --deploy

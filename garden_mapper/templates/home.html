@@ -116,10 +116,11 @@ import * as math from '{% static 'garden_mapper/math.js' %}'
 import { wslog } from '{% static 'garden_mapper/wslog.js' %}'
 
 import * as obvious from '{% static 'obvious.js' %}'
+import { WebGLContext } from '{% static 'webgl-canvas.js' %}'
 
 const CSRF_TOKEN = document.getElementsByName('csrfmiddlewaretoken')[0].value;
 const CANVAS = document.getElementById('canvas');
-const CONTEXT = CANVAS.getContext('2d');
+const CONTEXT = new WebGLContext(CANVAS, 'retained');
 
 var app = new Vue({
   el: '#app',
@@ -152,13 +153,14 @@ var app = new Vue({
     y: 0,
     zoom: 1, // zoom = pixels / observation_units
     selected: null,
-    markers: [],
+    marker: { x: 0, y: 0 },
     // forwarding
     icon,
     math,
     wslog,
     obvious,
-    canvas: CANVAS,
+    CANVAS,
+    CONTEXT,
   }),
   methods: {
     post(url, body) {
@@ -196,12 +198,44 @@ var app = new Vue({
       this.plantObserveX = result.x;
       this.plantObserveY = result.y;
     },
+    renderReference(i) {
+      CONTEXT.strokeStyle = 'black';
+      const { px, py } = math.transformToPixels(this, i, false);
+      CONTEXT.beginPath();
+      CONTEXT.arc(px, py, .02, 0, 2 * Math.PI);
+      CONTEXT.stroke();
+      i.shape = CONTEXT.getShape();
+    },
+    renderContext(i) {
+      CONTEXT.strokeStyle = 'black';
+      switch (i.instructions.op) {
+        case 'lines':
+          CONTEXT.beginPath();
+          var f = CONTEXT.moveTo.bind(CONTEXT);
+          for (const j of i.instructions.points){
+            const p = math.transformToPixels(this, j, false);
+            f(p.x, p.y);
+            f = CONTEXT.lineTo.bind(CONTEXT);
+          }
+          CONTEXT.stroke();
+          break;
+      }
+      i.shape = CONTEXT.getShape();
+    },
+    renderPlant(i, color = 'black') {
+      CONTEXT.strokeStyle = color;
+      var { x, y, icon_params } = this.plantObservation(i);
+      if (this.visualSubject == 'plant' && this.selected && this.selected.id == i.id)
+        icon_params = icon.iconParamsNest(this.plantObserveIconParams);
+      const { px, py } = math.transformToPixels(this, { x, y }, false);
+      CONTEXT.beginPath();
+      CONTEXT.arc(px, py, .02, 0, Math.PI);
+      CONTEXT.stroke();
+      icon.renderIcon(this, x, y, icon_params);
+      i.shape = CONTEXT.getShape();
+    },
     render() {
-      const selectionPrep = (subject, i) => {
-        const isSelected = this.visualSubject == subject && this.selected && this.selected.id == i.id;
-        CONTEXT.strokeStyle = isSelected ? 'skyblue' : 'black';
-        return isSelected;
-      };
+      CONTEXT.clear();
       CONTEXT.fillStyle = 'white';
       CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
       // grid
@@ -209,61 +243,36 @@ var app = new Vue({
         CONTEXT.strokeStyle = 'lightgrey';
         CONTEXT.beginPath();
         for (let x = Math.floor(this.extents.xi); x <= Math.ceil(this.extents.xf); ++x) {
-          const { px } = math.transformToPixels(this, { x });
+          const { px } = math.transformToPixels(this, { x }, false);
           CONTEXT.moveTo(px, 0);
           CONTEXT.lineTo(px, CANVAS.height);
         }
         for (let y = Math.floor(this.extents.yi); y <= Math.ceil(this.extents.yf); ++y) {
-          const { py } = math.transformToPixels(this, { y });
+          const { py } = math.transformToPixels(this, { y }, false);
           CONTEXT.moveTo(0, py);
           CONTEXT.lineTo(CANVAS.width, py);
         }
         CONTEXT.stroke();
       }
-      // references
-      for (const i of this.references) {
-        const { px, py } = math.transformToPixels(this, i);
-        selectionPrep('reference', i);
+      CONTEXT.getShape();
+      // garden
+      for (const i of this.references) this.renderReference(i);
+      for (const i of this.context) this.renderContext(i);
+      for (const i of this.plants) this.renderPlant(i);
+      // marker
+      {
+        CONTEXT.strokeStyle = 'rgba(0, 0, 0, 0)';
+        const { px, py } = math.transformToPixels(this, this.marker, false);
         CONTEXT.beginPath();
-        CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
+        CONTEXT.arc(px, py, .02, 0, 2 * Math.PI);
         CONTEXT.stroke();
+        this.marker.shape = CONTEXT.getShape();
       }
-      // context
-      for (const i of this.context) {
-        selectionPrep('context', i);
-        switch (i.instructions.op) {
-          case 'lines':
-            CONTEXT.beginPath();
-            var f = CONTEXT.moveTo.bind(CONTEXT);
-            for (const j of i.instructions.points){
-              const p = math.transformToPixels(this, j);
-              f(p.x, p.y);
-              f = CONTEXT.lineTo.bind(CONTEXT);
-            }
-            CONTEXT.stroke();
-            break;
-        }
-      }
-      // plants
-      for (const i of this.plants) {
-        const isSelected = selectionPrep('plant', i);
-        var { x, y, icon_params } = this.plantObservation(i);
-        if (isSelected)
-          icon_params = icon.iconParamsNest(this.plantObserveIconParams);
-        const { px, py } = math.transformToPixels(this, {x, y});
-        CONTEXT.beginPath();
-        CONTEXT.arc(px, py, 4, 0, Math.PI);
-        CONTEXT.stroke();
-        icon.renderIcon(this, x, y, icon_params);
-      }
-      // markers
-      CONTEXT.strokeStyle = 'lawngreen';
-      for (const i of this.markers) {
-        const { px, py } = math.transformToPixels(this, i);
-        CONTEXT.beginPath();
-        CONTEXT.arc(px, py, 4, 0, 2 * Math.PI);
-        CONTEXT.stroke();
-      }
+      // display
+      CONTEXT.display(this);
+    },
+    renderSmall() {
+      CONTEXT.display({ ...this, skipGeometry: true });
     },
     onWheel(x, y, dWheel) {
       if (!this.gardenId) return;
@@ -288,7 +297,10 @@ var app = new Vue({
       this.iconParamsChanged();
     },
     iconParamsChanged() {
-      this.render();
+      this.selected.plant.shape.hide();
+      this.renderPlant(this.selected.plant, 'rgb(128, 192, 255)');
+      this.selected.plant.shape.geometrize();
+      this.renderSmall();
     },
     iconParamsSelected() {
       if (this.plantObserveIconParamsSelection == '') return;
@@ -324,7 +336,6 @@ var app = new Vue({
         this.post('/plant_delete', { id: i.id });
         return false;
       });
-      this.markers = [];
       if (references.length || plants.length) {
         // get extent of garden
         var entities = references;
@@ -351,6 +362,7 @@ var app = new Vue({
     editDel() {
       var url;
       var id = this.selected.id;
+      this.selected.shape.recolor(0, 0, 0, 0, 'Stroke');
       switch (this.visualSubject) {
         case 'reference':
           url = '/reference_delete';
@@ -413,10 +425,13 @@ var app = new Vue({
       this.calculateXY();
     },
     selected() {
-      this.render();
+      if (this.selected) this.selected.shape.recolor(0.5, 0.75, 1, 1, 'Stroke');
+      this.renderSmall();
     },
     visualSubject() {
-      this.render();
+      if (this.selected) this.selected.shape.recolor(0, 0, 0, 1, 'Stroke');
+      this.selected = null;
+      this.renderSmall();
     },
   },
   mounted() {

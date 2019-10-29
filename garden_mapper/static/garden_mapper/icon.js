@@ -52,12 +52,11 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
     y:  (xf - x) / d * params.width,
   };
   const divisions = Math.min(params.corrugation.number * 5 + 8, 40);
-  const context = self.canvas.getContext('2d');
-  context.fillStyle = 'white';
-  context.beginPath();
+  self.CONTEXT.fillStyle = 'white';
+  self.CONTEXT.beginPath();
   {
-    const { px, py } = self.math.transformToPixels(self, { x, y });
-    context.moveTo(px, py);
+    const { px, py } = self.math.transformToPixels(self, { x, y }, false);
+    self.CONTEXT.moveTo(px, py);
   }
   for (let i = 0; i < divisions; ++i) {
     const theta = (i / (divisions - 1)) * 2 * Math.PI;
@@ -67,11 +66,11 @@ function renderSegment(self, x, y, angle, size, params, rand, split) {
     const { px, py } = self.math.transformToPixels(self, {
       x: x + (p * (xf - x) + q * w.x) * s,
       y: y + (p * (yf - y) + q * w.y) * s,
-    });
-    context.lineTo(px, py);
+    }, false);
+    self.CONTEXT.lineTo(px, py);
   }
-  context.stroke();
-  context.fill();
+  self.CONTEXT.fill();
+  self.CONTEXT.stroke();
   return { x: xf, y: yf, angle: angleV, size: sizeF };
 }
 

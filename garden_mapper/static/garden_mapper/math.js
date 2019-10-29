@@ -19,20 +19,24 @@ export function distance(xi, yi, xf, yf) {
   return Math.sqrt(Math.pow(xf - xi, 2) + Math.pow(yf - yi, 2));
 }
 
-export function transformToPixels({ x, y, zoom, canvas }, point) {
+export function transformToPixels({ x, y, zoom, CANVAS }, point, view = true) {
+  if (!view) {
+    x = y = 0;
+    zoom = 1;
+  }
   const s = {
-    x:  (point.x - x) * zoom + canvas.width  / 2,
-    y: -(point.y - y) * zoom + canvas.height / 2,
+    x:  (point.x - x) * zoom + CANVAS.width  / 2,
+    y: -(point.y - y) * zoom + CANVAS.height / 2,
   };
   s.px = s.x;
   s.py = s.y;
   return s;
 }
 
-export function transformToWorld({ x, y, zoom, canvas }, point) {
+export function transformToWorld({ x, y, zoom, CANVAS }, point) {
   const s = {
-    x:  (point.x - canvas.width  / 2) / zoom + x,
-    y: -(point.y - canvas.height / 2) / zoom + y,
+    x:  (point.x - CANVAS.width  / 2) / zoom + x,
+    y: -(point.y - CANVAS.height / 2) / zoom + y,
   };
   s.wx = s.x;
   s.wy = s.y;
