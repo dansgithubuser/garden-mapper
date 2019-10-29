@@ -418,7 +418,9 @@ var app = new Vue({
       this.renderSmall();
     },
     visualSubject() {
-      this.render();
+      if (this.selected) this.selected.shape.recolor(0, 0, 0, 1, 'Stroke');
+      this.selected = null;
+      this.renderSmall();
     },
   },
   mounted() {
