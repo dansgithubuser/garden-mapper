@@ -73,7 +73,14 @@ export function onTap(self, id, x, y) {
           break;
         }
       }
-      if (self.selected) self.selected.shape.recolor(0, 0, 0, 1, 'Stroke');
+      if (self.selected) {
+        if (self.selected.plant) {
+          self.selected.plant.shape.hide();
+          self.selected.plant.shape = self.selected.shape;
+        }
+        self.selected.shape.unhide();
+        self.selected.shape.recolor(0, 0, 0, 1, 'Stroke');
+      }
       self.selected = near;
       break;
     case 'create':
